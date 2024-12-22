@@ -120,7 +120,7 @@ contract EasySwapOrderBook is
      * @param newOrders Multiple order structure data.
      * @return newOrderKeys The unique id of the order is returned in order, if the id is empty, the corresponding order was not created correctly.
      */
-    function makeOrders(
+    function makeOrders( 
         LibOrder.Order[] calldata newOrders
     )
         external
@@ -133,9 +133,9 @@ contract EasySwapOrderBook is
         uint256 orderAmount = newOrders.length;
         newOrderKeys = new OrderKey[](orderAmount);
 
-        uint128 ETHAmount;
+        uint128 ETHAmount; // total eth amount
         for (uint256 i = 0; i < orderAmount; ++i) {
-            uint128 buyPrice;
+            uint128 buyPrice; // the price of bid order
             if (newOrders[i].side == LibOrder.Side.Bid) {
                 buyPrice =
                     Price.unwrap(newOrders[i].price) *
@@ -144,7 +144,7 @@ contract EasySwapOrderBook is
 
             OrderKey newOrderKey = _makeOrderTry(newOrders[i], buyPrice);
             newOrderKeys[i] = newOrderKey;
-            if (
+            if ( // if the order is not created successfully, the eth will be returned
                 OrderKey.unwrap(newOrderKey) !=
                 OrderKey.unwrap(LibOrder.ORDERKEY_SENTINEL)
             ) {
@@ -152,7 +152,7 @@ contract EasySwapOrderBook is
             }
         }
 
-        if (msg.value > ETHAmount) {
+        if (msg.value > ETHAmount) { // return the remaining eth，if the eth is not enough, the transaction will be reverted
             _msgSender().safeTransferETH(msg.value - ETHAmount);
         }
     }
@@ -260,7 +260,7 @@ contract EasySwapOrderBook is
 
             if (success) {
                 successes[i] = success;
-                if (matchDetail.buyOrder.maker == _msgSender()) {
+                if (matchDetail.buyOrder.maker == _msgSender()) { // buy order
                     uint128 buyPrice;
                     buyPrice = abi.decode(data, (uint128));
                     // Calculate ETH the buyer has spent
@@ -271,7 +271,7 @@ contract EasySwapOrderBook is
             }
         }
 
-        if (msg.value > buyETHAmount) {
+        if (msg.value > buyETHAmount) { // return the remaining eth
             _msgSender().safeTransferETH(msg.value - buyETHAmount);
         }
     }
@@ -410,11 +410,11 @@ contract EasySwapOrderBook is
 
         // cancel old order
         uint256 oldFilledAmount = filledAmount[oldOrderKey];
-        _removeOrder(oldOrder);
-        _cancelOrder(oldOrderKey);
+        _removeOrder(oldOrder); // remove order from order storage
+        _cancelOrder(oldOrderKey); // cancel order from order book
         emit LogCancel(oldOrderKey, oldOrder.maker);
 
-        newOrderKey = _addOrder(newOrder);
+        newOrderKey = _addOrder(newOrder); // add new order to order storage
 
         // make new order
         if (oldOrder.side == LibOrder.Side.List) {
@@ -465,14 +465,14 @@ contract EasySwapOrderBook is
         OrderKey buyOrderKey = LibOrder.hash(buyOrder);
         _isMatchAvailable(sellOrder, buyOrder, sellOrderKey, buyOrderKey);
 
-        if (_msgSender() == sellOrder.maker) {
+        if (_msgSender() == sellOrder.maker) { // sell order
             // accept bid
-            require(msgValue == 0, "HD: value > 0");
-            bool isSellExist = orders[sellOrderKey].order.maker != address(0);
+            require(msgValue == 0, "HD: value > 0"); // sell order cannot accept eth
+            bool isSellExist = orders[sellOrderKey].order.maker != address(0); // check if sellOrder exist in order storage
             _validateOrder(sellOrder, isSellExist);
             _validateOrder(orders[buyOrderKey].order, false); // check if exist in order storage
 
-            uint128 fillPrice = Price.unwrap(buyOrder.price);
+            uint128 fillPrice = Price.unwrap(buyOrder.price); // the price of bid order
             if (isSellExist) {
                 // check if sellOrder exist in order storage , del&fill if exist
                 _removeOrder(sellOrder);
@@ -511,7 +511,7 @@ contract EasySwapOrderBook is
                     sellOrder.nft
                 );
             }
-        } else if (_msgSender() == buyOrder.maker) {
+        } else if (_msgSender() == buyOrder.maker) { // buy order
             // accept list
             bool isBuyExist = orders[buyOrderKey].order.maker != address(0);
             _validateOrder(orders[sellOrderKey].order, false); // check if exist in order storage
@@ -581,7 +581,7 @@ contract EasySwapOrderBook is
             "HD: kind mismatch"
         );
         require(sellOrder.maker != buyOrder.maker, "HD: same maker");
-        require(
+        require( // check if the asset is the same
             buyOrder.saleKind == LibOrder.SaleKind.FixedPriceForCollection ||
                 (sellOrder.nft.collection == buyOrder.nft.collection &&
                     sellOrder.nft.tokenId == buyOrder.nft.tokenId),

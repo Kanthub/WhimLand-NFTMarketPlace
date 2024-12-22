@@ -49,7 +49,7 @@ abstract contract OrderValidator is
         require(order.maker != address(0), "OVa: miss maker");
         // Order must be started and not be expired.
 
-        if (!isSkipExpiry) {
+        if (!isSkipExpiry) { // Skip expiry check if true.
             require(
                 order.expiry == 0 || order.expiry > block.timestamp,
                 "OVa: expired"

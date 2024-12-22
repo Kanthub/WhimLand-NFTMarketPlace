@@ -3,6 +3,7 @@ const { ethers, upgrades } = require("hardhat")
 const { toBn } = require("evm-bn")
 const { Side, SaleKind } = require("./common")
 const { exp } = require("@prb/math")
+
 let owner, addr1, addr2, addrs
 let esVault, esDex, testERC721, testLibOrder
 const AddressZero = "0x0000000000000000000000000000000000000000";
