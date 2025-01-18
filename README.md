@@ -257,3 +257,5 @@ npx hardhat size-contracts
 slither-read-storage ./contracts/EasySwapOrderBook.sol --contract-name EasySwapOrderBook --solc-remaps @=node_modules/@ --json storage_layout.json
 ```
 see more [slither](https://github.com/crytic/slither)
+
+-EOF-
