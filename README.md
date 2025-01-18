@@ -70,14 +70,10 @@ Activity ———— 代表 NFT 状态下发生的事件：mint, transfer, list
 
 #### 交易同步服务
 ![alt text](/docs/images/sync_service.png)
+![alt text](/docs/images/schedule_task.png)
 
 #### NFT 导入服务
 ![alt text](/docs/images/importer_service.png)
-
-#### 订单中继服务
-
-#### 定时任务模块 
-
 
 #### 微服务功能描述
 ![alt text](/docs/images/micro_service.png)
