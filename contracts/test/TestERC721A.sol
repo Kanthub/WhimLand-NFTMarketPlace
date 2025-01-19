@@ -16,12 +16,12 @@ contract Troll is ERC721A, Ownable, ReentrancyGuard {
     constructor() ERC721A("Troll", "Troll") Ownable(msg.sender) {}
 
     function mint(address to, uint256 quantity) external nonReentrant {
-        require(mintStatus, "Not yet started");
-        require(
-            _totalMinted() + quantity <= MAX_SUPPLY,
-            "Exceed the maximum amount"
-        );
-        require(quantity <= PER_MINT, "Exceed per mint");
+        // require(mintStatus, "Not yet started");
+        // require(
+        //     _totalMinted() + quantity <= MAX_SUPPLY,
+        //     "Exceed the maximum amount"
+        // );
+        // require(quantity <= PER_MINT, "Exceed per mint");
 
         // mint
         _safeMint(to, quantity);
