@@ -2,6 +2,8 @@ require("@nomicfoundation/hardhat-toolbox")
 require("@nomiclabs/hardhat-ethers")
 require('hardhat-contract-sizer')
 require('@openzeppelin/hardhat-upgrades')
+require('solidity-coverage')
+
 // config
 const { config: dotenvConfig } = require("dotenv")
 const { resolve } = require("path")

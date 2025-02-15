@@ -10,7 +10,7 @@ async function main() {
   // console.log("testERC721 contract deployed to:", testERC721.address)
 
   //mint
-  let testERC721Address = "0x8d0FF0aa2585c4cc5Ca17fFcD0b18f005072C29D";
+  let testERC721Address = "0xF2e0BA02a187F19F5A390E4f990c684d81A833A0";
   let testERC721 = await (await ethers.getContractFactory("Troll")).attach(testERC721Address)
   tx = await testERC721.mint(deployer.address, 50);
   await tx.wait()

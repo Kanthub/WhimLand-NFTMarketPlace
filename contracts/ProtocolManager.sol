@@ -18,7 +18,7 @@ abstract contract ProtocolManager is
     function __ProtocolManager_init(
         uint128 newProtocolShare
     ) internal onlyInitializing {
-        __Ownable_init(_msgSender());
+        // __Ownable_init(_msgSender());
         __ProtocolManager_init_unchained(
             newProtocolShare
         );

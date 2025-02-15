@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+// import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import {RedBlackTreeLibrary, Price} from "./libraries/RedBlackTreeLibrary.sol";
 import {LibOrder, OrderKey} from "./libraries/LibOrder.sol";
 
 error CannotInsertDuplicateOrder(OrderKey orderKey);
 
-contract OrderStorage is ReentrancyGuardUpgradeable {
+contract OrderStorage is Initializable {
     using RedBlackTreeLibrary for RedBlackTreeLibrary.Tree;
 
     /// @dev all order keys are wrapped in a sentinel value to avoid collisions
@@ -21,6 +23,10 @@ contract OrderStorage is ReentrancyGuardUpgradeable {
     /// @dev order queue for each collection, side and expecially price, sorted by orderKey
     mapping(address => mapping(LibOrder.Side => mapping(Price => LibOrder.OrderQueue)))
         public orderQueues;
+
+    function __OrderStorage_init() internal onlyInitializing {}
+
+    function __OrderStorage_init_unchained() internal onlyInitializing {}
 
     function onePlus(uint256 x) internal pure returns (uint256) {
         unchecked {
@@ -56,7 +62,9 @@ contract OrderStorage is ReentrancyGuardUpgradeable {
     function _addOrder(
         LibOrder.Order memory order
     ) internal returns (OrderKey orderKey) {
+        // 获取订单的hash值
         orderKey = LibOrder.hash(order);
+        //  判断订单是否已经存在
         if (orders[orderKey].order.maker != address(0)) {
             revert CannotInsertDuplicateOrder(orderKey);
         }
@@ -74,8 +82,8 @@ contract OrderStorage is ReentrancyGuardUpgradeable {
             order.nft.collection
         ][order.side][order.price];
 
-        if (LibOrder.isSentinel(orderQueue.head)) {
-            orderQueues[order.nft.collection][order.side][
+        if (LibOrder.isSentinel(orderQueue.head)) { // 队列是否初始化
+            orderQueues[order.nft.collection][order.side][ // 创建新的队列
                 order.price
             ] = LibOrder.OrderQueue(
                 LibOrder.ORDERKEY_SENTINEL,
@@ -85,15 +93,15 @@ contract OrderStorage is ReentrancyGuardUpgradeable {
                 order.price
             ];
         }
-        if (LibOrder.isSentinel(orderQueue.tail)) {
+        if (LibOrder.isSentinel(orderQueue.tail)) { // 队列是否为空
             orderQueue.head = orderKey;
             orderQueue.tail = orderKey;
-            orders[orderKey] = LibOrder.DBOrder(
+            orders[orderKey] = LibOrder.DBOrder( // 创建新的订单，插入队列， 下一个订单为sentinel
                 order,
                 LibOrder.ORDERKEY_SENTINEL
             );
-        } else {
-            orders[orderQueue.tail].next = orderKey;
+        } else { // 队列不为空
+            orders[orderQueue.tail].next = orderKey; // 将新订单插入队列尾部
             orders[orderKey] = LibOrder.DBOrder(
                 order,
                 LibOrder.ORDERKEY_SENTINEL

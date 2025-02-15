@@ -27,8 +27,8 @@ contract EasySwapOrderBook is
     ReentrancyGuardUpgradeable,
     PausableUpgradeable,
     OrderStorage,
-    OrderValidator,
-    ProtocolManager
+    ProtocolManager,
+    OrderValidator
 {
     using LibTransferSafeUpgradeable for address;
     using LibTransferSafeUpgradeable for IERC721;
@@ -93,19 +93,29 @@ contract EasySwapOrderBook is
         string memory EIP712Name,
         string memory EIP712Version
     ) internal onlyInitializing {
-        __Context_init();
-        __ReentrancyGuard_init();
-        __Pausable_init();
-        __Ownable_init(_msgSender());
-
-        __OrderValidator_init(EIP712Name, EIP712Version);
-        __ProtocolManager_init(newProtocolShare);
-        __EasySwapOrderBook_init_unchained(newVault);
+        __EasySwapOrderBook_init_unchained(
+            newProtocolShare,
+            newVault,
+            EIP712Name,
+            EIP712Version
+        );
     }
 
     function __EasySwapOrderBook_init_unchained(
-        address newVault
+        uint128 newProtocolShare,
+        address newVault,
+        string memory EIP712Name,
+        string memory EIP712Version
     ) internal onlyInitializing {
+        __Context_init();
+        __Ownable_init(_msgSender());
+        __ReentrancyGuard_init();
+        __Pausable_init();
+
+        __OrderStorage_init();
+        __ProtocolManager_init(newProtocolShare);
+        __OrderValidator_init(EIP712Name, EIP712Version);
+
         setVault(newVault);
     }
 
@@ -120,7 +130,7 @@ contract EasySwapOrderBook is
      * @param newOrders Multiple order structure data.
      * @return newOrderKeys The unique id of the order is returned in order, if the id is empty, the corresponding order was not created correctly.
      */
-    function makeOrders( 
+    function makeOrders(
         LibOrder.Order[] calldata newOrders
     )
         external
@@ -144,7 +154,8 @@ contract EasySwapOrderBook is
 
             OrderKey newOrderKey = _makeOrderTry(newOrders[i], buyPrice);
             newOrderKeys[i] = newOrderKey;
-            if ( // if the order is not created successfully, the eth will be returned
+            if (
+                // if the order is not created successfully, the eth will be returned
                 OrderKey.unwrap(newOrderKey) !=
                 OrderKey.unwrap(LibOrder.ORDERKEY_SENTINEL)
             ) {
@@ -152,7 +163,8 @@ contract EasySwapOrderBook is
             }
         }
 
-        if (msg.value > ETHAmount) { // return the remaining eth，if the eth is not enough, the transaction will be reverted
+        if (msg.value > ETHAmount) {
+            // return the remaining eth，if the eth is not enough, the transaction will be reverted
             _msgSender().safeTransferETH(msg.value - ETHAmount);
         }
     }
@@ -260,7 +272,8 @@ contract EasySwapOrderBook is
 
             if (success) {
                 successes[i] = success;
-                if (matchDetail.buyOrder.maker == _msgSender()) { // buy order
+                if (matchDetail.buyOrder.maker == _msgSender()) {
+                    // buy order
                     uint128 buyPrice;
                     buyPrice = abi.decode(data, (uint128));
                     // Calculate ETH the buyer has spent
@@ -271,7 +284,8 @@ contract EasySwapOrderBook is
             }
         }
 
-        if (msg.value > buyETHAmount) { // return the remaining eth
+        if (msg.value > buyETHAmount) {
+            // return the remaining eth
             _msgSender().safeTransferETH(msg.value - buyETHAmount);
         }
     }
@@ -465,7 +479,8 @@ contract EasySwapOrderBook is
         OrderKey buyOrderKey = LibOrder.hash(buyOrder);
         _isMatchAvailable(sellOrder, buyOrder, sellOrderKey, buyOrderKey);
 
-        if (_msgSender() == sellOrder.maker) { // sell order
+        if (_msgSender() == sellOrder.maker) {
+            // sell order
             // accept bid
             require(msgValue == 0, "HD: value > 0"); // sell order cannot accept eth
             bool isSellExist = orders[sellOrderKey].order.maker != address(0); // check if sellOrder exist in order storage
@@ -511,7 +526,8 @@ contract EasySwapOrderBook is
                     sellOrder.nft
                 );
             }
-        } else if (_msgSender() == buyOrder.maker) { // buy order
+        } else if (_msgSender() == buyOrder.maker) {
+            // buy order
             // accept list
             bool isBuyExist = orders[buyOrderKey].order.maker != address(0);
             _validateOrder(orders[sellOrderKey].order, false); // check if exist in order storage

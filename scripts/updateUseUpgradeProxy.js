@@ -1,17 +1,17 @@
 const { ethers, upgrades } = require("hardhat");
 
 const esDex_name = "EasySwapOrderBook";
-const esDex_address = "0x5560e1c2E0260c2274e400d80C30CDC4B92dC8ac"
+const esDex_address = "0xcEE5AA84032D4a53a0F9d2c33F36701c3eAD5895"
 
 const esVault_name = "EasySwapVault";
-const esVault_address = "0x75EC7448bC37c1FB484520C45b40F1564eBd0d19"
+const esVault_address = "0xaD65f3dEac0Fa9Af4eeDC96E95574AEaba6A2834"
 
 /**  * 2024/12/22 in sepolia testnet
- * esVault contract deployed to: 0x75EC7448bC37c1FB484520C45b40F1564eBd0d19
+ * esVault contract deployed to: 0xaD65f3dEac0Fa9Af4eeDC96E95574AEaba6A2834
      esVault ImplementationAddress: 
      esVault AdminAddress: 
-   esDex contract deployed to: 0x5560e1c2E0260c2274e400d80C30CDC4B92dC8ac
-      esDex ImplementationAddress: 
+   esDex contract deployed to: 0xcEE5AA84032D4a53a0F9d2c33F36701c3eAD5895
+      esDex ImplementationAddress:  0x5eF36e709cbdEB672554195F5E7A491Cf921E597
       esDex AdminAddress: 
  */
 

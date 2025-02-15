@@ -12,13 +12,13 @@ const { toBn } = require("evm-bn")
  */
 
 const esDex_name = "EasySwapOrderBook";
-const esDex_address = "0x5560e1c2E0260c2274e400d80C30CDC4B92dC8ac"
+const esDex_address = "0xcEE5AA84032D4a53a0F9d2c33F36701c3eAD5895"
 
 const esVault_name = "EasySwapVault";
-const esVault_address = "0x75EC7448bC37c1FB484520C45b40F1564eBd0d19"
+const esVault_address = "0xaD65f3dEac0Fa9Af4eeDC96E95574AEaba6A2834"
 
 const erc721_name = "TestERC721"
-const erc721_address = "0x8d0FF0aa2585c4cc5Ca17fFcD0b18f005072C29D"
+const erc721_address = "0xF2e0BA02a187F19F5A390E4f990c684d81A833A0"
 
 let esDex, esVault, testERC721
 let deployer
@@ -44,12 +44,11 @@ async function main() {
     await approvalForVault();
 
     // 2. make order
-    // await testMakeOrder();
+    await testMakeOrder();
 
     // for (let i = 1; i < 20; i++) {
     //     await testMakeOrder(i);
     // }
-
 
     // 3. cancel order
     // let orderKeys = [];
@@ -66,28 +65,28 @@ async function main() {
     // 4. match order 
     // await testMatchOrder();
 
-    let orderKeys = ["0x98e25dd9a45bbf79100ebe3b1b311b2b6702a28c9fca5ee317feb0049893faa5",
-        "0x0c78b81d5da49fe7fd13832aac4aba9f79f31d25453b61ed09ec3ce941adca70",
-        "0x201dc11898ad0213485b4b34b9702beedc8f3bbcc71b2e38512508adb59c8ea9"];
+    // let orderKeys = ["0x98e25dd9a45bbf79100ebe3b1b311b2b6702a28c9fca5ee317feb0049893faa5",
+    //     "0x0c78b81d5da49fe7fd13832aac4aba9f79f31d25453b61ed09ec3ce941adca70",
+    //     "0x201dc11898ad0213485b4b34b9702beedc8f3bbcc71b2e38512508adb59c8ea9"];
 
-    for (let i = 0; i < 2; i++) {
-        let info = await getOrderInfo(orderKeys[i]);
-        let sellOrder = info.order;
-        // console.log("sellOrder: ", sellOrder);
-        let buyOrder = {
-            side: Side.Bid,
-            saleKind: SaleKind.FixedPriceForItem,
-            maker: trader.address,
-            nft: sellOrder.nft,
-            price: sellOrder.price,
-            expiry: sellOrder.expiry,
-            salt: sellOrder.salt,
-        }
+    // for (let i = 0; i < 2; i++) {
+    //     let info = await getOrderInfo(orderKeys[i]);
+    //     let sellOrder = info.order;
+    //     // console.log("sellOrder: ", sellOrder);
+    //     let buyOrder = {
+    //         side: Side.Bid,
+    //         saleKind: SaleKind.FixedPriceForItem,
+    //         maker: trader.address,
+    //         nft: sellOrder.nft,
+    //         price: sellOrder.price,
+    //         expiry: sellOrder.expiry,
+    //         salt: sellOrder.salt,
+    //     }
 
-        let tx = await esDex.connect(trader).matchOrder(sellOrder, buyOrder, { value: toBn("0.002") });
-        let txRec = await tx.wait();
-        console.log("matchOrder tx: ", tx.hash);
-    }
+    //     let tx = await esDex.connect(trader).matchOrder(sellOrder, buyOrder, { value: toBn("0.002") });
+    //     let txRec = await tx.wait();
+    //     console.log("matchOrder tx: ", tx.hash);
+    // }
 
     // 5. else
     // await withdrawProtocolFee();
