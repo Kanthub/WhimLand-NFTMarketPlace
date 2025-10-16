@@ -60,6 +60,7 @@ contract NFTAuction is
 
     event BidPlaced(uint256 auctionId, address bidder, uint256 amount);
     event AuctionSettled(uint256 auctionId, address winner, uint256 amount);
+    event AuctionPerFeeSet(uint256 oldPerFee, uint256 newPerFee);
 
     constructor() {
         _disableInitializers();
@@ -249,6 +250,11 @@ contract NFTAuction is
     ) external nonReentrant onlyOwner {
         IERC20(token).safeTransfer(recipient, amount);
         emit LogWithdrawERC20(recipient, token, amount);
+    }
+
+    function setPerFee(uint256 _perFee) public onlyOwner {
+        emit AuctionPerFeeSet(perFee, _perFee);
+        perFee = _perFee;
     }
 
     function onERC721Received(

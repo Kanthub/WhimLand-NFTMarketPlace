@@ -56,6 +56,12 @@ contract NFTManager is
 
     // ============== Events =====================
     event Received(address indexed sender, uint256 amount);
+    event MintedNFT(
+        address indexed to,
+        uint256 tokenId,
+        uint256 masterId,
+        uint256 printNumber
+    );
 
     // ============== Modifiers =====================
     modifier onlyWhiteListed() {
@@ -119,6 +125,7 @@ contract NFTManager is
         metadata[tokenId] = md;
 
         remainingUses[tokenId] = md.usageLimit; // 初始化剩余使用次数
+        emit MintedNFT(to, tokenId, tokenId, 0);
         return tokenId;
     }
 
@@ -150,6 +157,8 @@ contract NFTManager is
         isPrintExist[masterId][printNumber] = true;
 
         remainingUses[tokenId] = metadata[masterId].usageLimit;
+
+        emit MintedNFT(to, tokenId, masterId, printNumber);
         return tokenId;
     }
 
@@ -160,6 +169,7 @@ contract NFTManager is
         uint256 startingPrintNumber
     ) external onlyWhiteListed whenNotPaused {
         require(nextTokenId + amount - 1 <= maxSupply, "Exceeds max supply");
+        require(isMaster[masterId], "Invalid masterId");
         for (uint256 i = 0; i < amount; i++) {
             uint256 tokenId = nextTokenId++;
 
@@ -169,58 +179,110 @@ contract NFTManager is
             fromMaster[tokenId] = masterId;
 
             // Print edition 编号从 startingPrintNumber 开始
-            require(
-                !isPrintExist[masterId][startingPrintNumber + i],
-                "Print number already exists"
-            );
-            printEditionNumber[tokenId] = startingPrintNumber + i;
-            isPrintExist[masterId][startingPrintNumber + i] = true;
+            while (!isPrintExist[masterId][startingPrintNumber]) {
+                startingPrintNumber = startingPrintNumber + 1;
+            }
+
+            printEditionNumber[tokenId] = startingPrintNumber;
+            isPrintExist[masterId][startingPrintNumber] = true;
 
             // 继承 Master 的 metadata
-            require(isMaster[masterId], "Invalid masterId");
             metadata[tokenId] = metadata[masterId];
-
             remainingUses[tokenId] = metadata[masterId].usageLimit;
+
+            emit MintedNFT(to, tokenId, masterId, startingPrintNumber);
         }
     }
 
-    function mintBatchPrintEditionRandom(
+    function mintBatchPrintEditionRandomMasters(
         address to,
-        uint256 masterId,
-        uint256[] memory printNumbers
-    ) public onlyWhiteListed whenNotPaused returns (uint256[] memory) {
+        uint256[] calldata masterIds,
+        uint256 totalAmount
+    ) external onlyWhiteListed whenNotPaused {
+        require(masterIds.length > 0, "No master IDs provided");
         require(
-            nextTokenId + printNumbers.length - 1 <= maxSupply,
+            nextTokenId + totalAmount - 1 <= maxSupply,
             "Exceeds max supply"
         );
-        require(isMaster[masterId], "Invalid masterId");
-        uint256[] memory tokenIds = new uint256[](printNumbers.length);
 
-        for (uint256 i = 0; i < printNumbers.length; i++) {
+        for (uint256 i = 0; i < totalAmount; i++) {
+            // 随机选择一个 masterId
+            uint256 randomIndex = uint256(
+                keccak256(
+                    abi.encodePacked(
+                        block.timestamp,
+                        block.prevrandao,
+                        i,
+                        nextTokenId
+                    )
+                )
+            ) % masterIds.length;
+
+            uint256 masterId = masterIds[randomIndex];
+            require(isMaster[masterId], "Invalid masterId");
+
             uint256 tokenId = nextTokenId++;
-            tokenIds[i] = tokenId;
 
             _safeMint(to, tokenId);
+
             // 标记为非 Master
             isMaster[tokenId] = false;
             fromMaster[tokenId] = masterId;
 
-            // 设置 Print edition 编号
-            require(
-                !isPrintExist[masterId][printNumbers[i]],
-                "Print number already exists"
-            );
-            printEditionNumber[tokenId] = printNumbers[i];
-            isPrintExist[masterId][printNumbers[i]] = true;
+            // 随机生成 print edition 编号，确保不重复
+            uint256 startingPrintNumber = 1;
+            while (isPrintExist[masterId][startingPrintNumber]) {
+                startingPrintNumber++;
+            }
+
+            printEditionNumber[tokenId] = startingPrintNumber;
+            isPrintExist[masterId][startingPrintNumber] = true;
 
             // 继承 Master 的 metadata
             metadata[tokenId] = metadata[masterId];
-
             remainingUses[tokenId] = metadata[masterId].usageLimit;
-        }
 
-        return tokenIds;
+            emit MintedNFT(to, tokenId, masterId, startingPrintNumber);
+        }
     }
+
+    // function mintBatchPrintEditionRandom(
+    //     address to,
+    //     uint256 masterId,
+    //     uint256[] memory printNumbers
+    // ) public onlyWhiteListed whenNotPaused returns (uint256[] memory) {
+    //     require(
+    //         nextTokenId + printNumbers.length - 1 <= maxSupply,
+    //         "Exceeds max supply"
+    //     );
+    //     require(isMaster[masterId], "Invalid masterId");
+    //     uint256[] memory tokenIds = new uint256[](printNumbers.length);
+
+    //     for (uint256 i = 0; i < printNumbers.length; i++) {
+    //         uint256 tokenId = nextTokenId++;
+    //         tokenIds[i] = tokenId;
+
+    //         _safeMint(to, tokenId);
+    //         // 标记为非 Master
+    //         isMaster[tokenId] = false;
+    //         fromMaster[tokenId] = masterId;
+
+    //         // 设置 Print edition 编号
+    //         require(
+    //             !isPrintExist[masterId][printNumbers[i]],
+    //             "Print number already exists"
+    //         );
+    //         printEditionNumber[tokenId] = printNumbers[i];
+    //         isPrintExist[masterId][printNumbers[i]] = true;
+
+    //         // 继承 Master 的 metadata
+    //         metadata[tokenId] = metadata[masterId];
+
+    //         remainingUses[tokenId] = metadata[masterId].usageLimit;
+    //     }
+
+    //     return tokenIds;
+    // }
 
     // ===================== Metadata =====================
     function setBaseURI(string memory _uri) external onlyOwner {
