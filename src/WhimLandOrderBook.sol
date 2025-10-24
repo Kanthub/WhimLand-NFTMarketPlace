@@ -44,6 +44,7 @@ contract WhimLandOrderBook is
         address indexed maker,
         LibOrder.Asset nft,
         Price price,
+        address currency,
         uint64 expiry,
         uint64 salt
     );
@@ -389,6 +390,7 @@ contract WhimLandOrderBook is
                 order.maker,
                 order.nft,
                 order.price,
+                order.currency,
                 order.expiry,
                 order.salt
             );
@@ -540,6 +542,7 @@ contract WhimLandOrderBook is
             newOrder.maker,
             newOrder.nft,
             newOrder.price,
+            newOrder.currency,
             newOrder.expiry,
             newOrder.salt
         );

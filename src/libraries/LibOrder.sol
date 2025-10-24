@@ -18,7 +18,7 @@ library LibOrder {
 
     struct Asset {
         uint256 tokenId;
-        address collection;
+        address collectionAddr;
         uint96 amount;
     }
 
@@ -75,7 +75,7 @@ library LibOrder {
                 abi.encode(
                     ASSET_TYPEHASH,
                     asset.tokenId,
-                    asset.collection,
+                    asset.collectionAddr,
                     asset.amount
                 )
             );
