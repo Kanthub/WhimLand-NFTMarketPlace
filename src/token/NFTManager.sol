@@ -31,6 +31,7 @@ contract NFTManager is
     uint256 public nextTokenId = 1;
     uint256 public maxSupply; // 最大供应量
     string public baseURI; // 基础URI
+    address public editer;
 
     // Master/Print edition
     mapping(uint256 => bool) public isMaster;
@@ -39,6 +40,7 @@ contract NFTManager is
     mapping(uint256 => mapping(uint256 => bool)) public isPrintExist; // masterId => printNumber => exists, 用于防止重复铸造print edition
     mapping(uint256 => uint256) public fromMaster; // Print edition 来源的 Master ID
     mapping(address => bool) public isWhiteListed; // 白名单地址
+    mapping(address => bool) public isEditer; // 核销权限地址
 
     // Metadata
     struct NFTMetadata {
@@ -60,12 +62,19 @@ contract NFTManager is
         address indexed to,
         uint256 tokenId,
         uint256 masterId,
-        uint256 printNumber
+        uint256 printNumber,
+        uint256 usageLimit
     );
+    event NFTUsed(uint256 tokenID, uint256 remainingUses, uint256 timestamp);
 
     // ============== Modifiers =====================
     modifier onlyWhiteListed() {
         require(isWhiteListed[msg.sender], "Not whitelisted");
+        _;
+    }
+
+    modifier onlyEditer() {
+        require(isEditer[msg.sender], "No Access to eidt");
         _;
     }
 
@@ -89,6 +98,7 @@ contract NFTManager is
         _transferOwnership(_initialOwner);
 
         isWhiteListed[_initialOwner] = true;
+        isEditer[_initialOwner] = true;
     }
 
     receive() external payable {
@@ -125,7 +135,7 @@ contract NFTManager is
         metadata[tokenId] = md;
 
         remainingUses[tokenId] = md.usageLimit; // 初始化剩余使用次数
-        emit MintedNFT(to, tokenId, tokenId, 0);
+        emit MintedNFT(to, tokenId, tokenId, 0, md.usageLimit);
         return tokenId;
     }
 
@@ -158,7 +168,13 @@ contract NFTManager is
 
         remainingUses[tokenId] = metadata[masterId].usageLimit;
 
-        emit MintedNFT(to, tokenId, masterId, printNumber);
+        emit MintedNFT(
+            to,
+            tokenId,
+            masterId,
+            printNumber,
+            metadata[tokenId].usageLimit
+        );
         return tokenId;
     }
 
@@ -190,7 +206,13 @@ contract NFTManager is
             metadata[tokenId] = metadata[masterId];
             remainingUses[tokenId] = metadata[masterId].usageLimit;
 
-            emit MintedNFT(to, tokenId, masterId, startingPrintNumber);
+            emit MintedNFT(
+                to,
+                tokenId,
+                masterId,
+                startingPrintNumber,
+                remainingUses[tokenId]
+            );
         }
     }
 
@@ -242,7 +264,13 @@ contract NFTManager is
             metadata[tokenId] = metadata[masterId];
             remainingUses[tokenId] = metadata[masterId].usageLimit;
 
-            emit MintedNFT(to, tokenId, masterId, startingPrintNumber);
+            emit MintedNFT(
+                to,
+                tokenId,
+                masterId,
+                startingPrintNumber,
+                remainingUses[tokenId]
+            );
         }
     }
 
@@ -297,7 +325,7 @@ contract NFTManager is
         string memory basedURI = _baseURI();
         return
             bytes(basedURI).length > 0
-                ? string.concat(baseURI, tokenId.toString())
+                ? string.concat(baseURI, tokenId.toString(), ".json")
                 : "";
     }
 
@@ -372,15 +400,18 @@ contract NFTManager is
     }
 
     // ====================== 核销使用次数, 必须tokenId的拥有者调用 =====================
-    function useNFT(uint256 tokenId) public nonReentrant whenNotPaused {
+    function useNFT(
+        uint256 tokenId
+    ) public nonReentrant onlyEditer whenNotPaused {
         _requireOwned(tokenId);
         require(remainingUses[tokenId] > 0, "No remaining uses");
         remainingUses[tokenId]--;
 
-        // 核销次数用完即销毁
-        if (remainingUses[tokenId] == 0) {
-            burn(tokenId);
-        }
+        // // 核销次数用完即销毁
+        // if (remainingUses[tokenId] == 0) {
+        //     burn(tokenId);
+        // }
+        emit NFTUsed(tokenId, remainingUses[tokenId], block.timestamp);
     }
 
     // ===================== 转移NFT =====================
@@ -426,6 +457,10 @@ contract NFTManager is
     // ==================== white list =====================
     function setWhiteList(address operator, bool approved) public onlyOwner {
         isWhiteListed[operator] = approved;
+    }
+
+    function setEditer(address operator, bool approved) public onlyOwner {
+        isEditer[operator] = approved;
     }
 
     // ===================== view functions =====================

@@ -74,7 +74,7 @@ contract OrderStorage is Initializable {
 
         // insert price to price tree if not exists
         RedBlackTreeLibrary.Tree storage priceTree = priceTrees[
-            order.nft.collection
+            order.nft.collectionAddr
         ][order.side];
         if (!priceTree.exists(order.price)) {
             priceTree.insert(order.price);
@@ -82,18 +82,18 @@ contract OrderStorage is Initializable {
 
         // insert order to order queue
         LibOrder.OrderQueue storage orderQueue = orderQueues[
-            order.nft.collection
+            order.nft.collectionAddr
         ][order.side][order.price];
 
         if (LibOrder.isSentinel(orderQueue.head)) {
             // 队列是否初始化
-            orderQueues[order.nft.collection][order.side][ // 创建新的队列
+            orderQueues[order.nft.collectionAddr][order.side][ // 创建新的队列
                 order.price
             ] = LibOrder.OrderQueue(
                 LibOrder.ORDERKEY_SENTINEL,
                 LibOrder.ORDERKEY_SENTINEL
             );
-            orderQueue = orderQueues[order.nft.collection][order.side][
+            orderQueue = orderQueues[order.nft.collectionAddr][order.side][
                 order.price
             ];
         }
@@ -121,7 +121,7 @@ contract OrderStorage is Initializable {
         LibOrder.Order memory order
     ) internal returns (OrderKey orderKey) {
         LibOrder.OrderQueue storage orderQueue = orderQueues[
-            order.nft.collection
+            order.nft.collectionAddr
         ][order.side][order.price];
         orderKey = orderQueue.head;
         OrderKey prevOrderKey;
@@ -163,11 +163,11 @@ contract OrderStorage is Initializable {
         }
         if (found) {
             if (LibOrder.isSentinel(orderQueue.head)) {
-                delete orderQueues[order.nft.collection][order.side][
+                delete orderQueues[order.nft.collectionAddr][order.side][
                     order.price
                 ];
                 RedBlackTreeLibrary.Tree storage priceTree = priceTrees[
-                    order.nft.collection
+                    order.nft.collectionAddr
                 ][order.side];
                 if (priceTree.exists(order.price)) {
                     priceTree.remove(order.price);

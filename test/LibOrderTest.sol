@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {LibOrder, OrderKey} from "../libraries/LibOrder.sol";
+import {LibOrder, OrderKey} from "../src/libraries/LibOrder.sol";
 
 contract LibOrderTest {
     using LibOrder for LibOrder.Order;

@@ -169,7 +169,11 @@ contract WhimLandVault is IWhimLandVault, OwnableUpgradeable {
         address to,
         LibOrder.Asset calldata assets
     ) external onlyWhimLandOrderBook {
-        IERC721(assets.collection).safeTransferNFT(from, to, assets.tokenId);
+        IERC721(assets.collectionAddr).safeTransferNFT(
+            from,
+            to,
+            assets.tokenId
+        );
     }
 
     function batchTransferERC721(

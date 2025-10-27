@@ -360,7 +360,7 @@ contract WhimLandOrderBook is
                 IWhimLandVault(_vault).depositNFT(
                     newOrderKey,
                     order.maker,
-                    order.nft.collection,
+                    order.nft.collectionAddr,
                     order.nft.tokenId
                 );
             } else if (order.side == LibOrder.Side.Bid) {
@@ -415,7 +415,7 @@ contract WhimLandOrderBook is
                 IWhimLandVault(_vault).withdrawNFT(
                     orderHash,
                     order.maker,
-                    order.nft.collection,
+                    order.nft.collectionAddr,
                     order.nft.tokenId
                 );
             } else if (order.side == LibOrder.Side.Bid) {
@@ -456,7 +456,7 @@ contract WhimLandOrderBook is
             (oldOrder.side != newOrder.side) ||
             (oldOrder.maker != newOrder.maker) ||
             (oldOrder.currency != newOrder.currency) ||
-            (oldOrder.nft.collection != newOrder.nft.collection) ||
+            (oldOrder.nft.collectionAddr != newOrder.nft.collectionAddr) ||
             (oldOrder.nft.tokenId != newOrder.nft.tokenId) ||
             filledAmount[oldOrderKey] >= oldOrder.nft.amount // order cannot be canceled or filled
         ) {
@@ -585,7 +585,7 @@ contract WhimLandOrderBook is
             uint128 protocolFee = _shareToAmount(fillPrice, protocolShare);
             // calculate royalty fee (版税)
             (address royaltyReceiver, uint256 royaltyFee) = NFTManager(
-                payable(buyOrder.nft.collection)
+                payable(buyOrder.nft.collectionAddr)
             ).royaltyInfo(buyOrder.nft.tokenId, fillPrice);
 
             // 从vault提取资金，扣取手续费后给卖家
@@ -623,7 +623,7 @@ contract WhimLandOrderBook is
                 IWhimLandVault(_vault).withdrawNFT(
                     sellOrderKey,
                     buyOrder.maker,
-                    sellOrder.nft.collection,
+                    sellOrder.nft.collectionAddr,
                     sellOrder.nft.tokenId
                 );
             } else {
@@ -649,7 +649,7 @@ contract WhimLandOrderBook is
             uint128 protocolFee = _shareToAmount(fillPrice, protocolShare);
             // calculate royalty fee (版税)
             (address royaltyReceiver, uint256 royaltyFee) = NFTManager(
-                payable(buyOrder.nft.collection)
+                payable(buyOrder.nft.collectionAddr)
             ).royaltyInfo(buyOrder.nft.tokenId, fillPrice);
 
             // 如果买单不存在，先从买家账户扣款到合约，再把扣款转给卖家
@@ -744,7 +744,7 @@ contract WhimLandOrderBook is
             IWhimLandVault(_vault).withdrawNFT(
                 sellOrderKey,
                 buyOrder.maker,
-                sellOrder.nft.collection,
+                sellOrder.nft.collectionAddr,
                 sellOrder.nft.tokenId
             );
             costValue = isBuyExist ? 0 : buyPrice;
@@ -774,10 +774,10 @@ contract WhimLandOrderBook is
         );
         require(sellOrder.maker != buyOrder.maker, "HD: same maker");
         require( // check if the asset is the same
-            (sellOrder.nft.collection == buyOrder.nft.collection &&
+            (sellOrder.nft.collectionAddr == buyOrder.nft.collectionAddr &&
                 buyOrder.saleKind ==
                 LibOrder.SaleKind.FixedPriceForCollection) ||
-                (sellOrder.nft.collection == buyOrder.nft.collection &&
+                (sellOrder.nft.collectionAddr == buyOrder.nft.collectionAddr &&
                     sellOrder.nft.tokenId == buyOrder.nft.tokenId),
             "HD: asset mismatch"
         );
