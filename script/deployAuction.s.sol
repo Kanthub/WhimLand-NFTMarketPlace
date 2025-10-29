@@ -8,13 +8,13 @@ import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
 
 import {EmptyContract} from "./utils/EmptyContract.sol";
 import {EmptyContract} from "./utils/EmptyContract.sol";
-import {NFTManager} from "../src/token/NFTManager.sol";
+import {NFTAuction} from "../src/Auction.sol";
 
 contract DeployerCpChainBridge is Script {
     EmptyContract public emptyContract;
-    ProxyAdmin public nftManagerProxyAdmin;
-    NFTManager public nftManager;
-    NFTManager public nftManagerImplementation;
+    ProxyAdmin public nftAuctionProxyAdmin;
+    NFTAuction public nftAuction;
+    NFTAuction public nftAuctionImplementation;
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -24,31 +24,28 @@ contract DeployerCpChainBridge is Script {
 
         emptyContract = new EmptyContract();
 
-        TransparentUpgradeableProxy proxyNftManager = new TransparentUpgradeableProxy(
+        TransparentUpgradeableProxy proxyAuction = new TransparentUpgradeableProxy(
                 address(emptyContract),
                 deployerAddress,
                 ""
             );
-        nftManager = NFTManager(payable(address(proxyNftManager)));
-        nftManagerImplementation = new NFTManager();
-        nftManagerProxyAdmin = ProxyAdmin(
-            getProxyAdminAddress(address(proxyNftManager))
+        nftAuction = NFTAuction(payable(address(proxyAuction)));
+        nftAuctionImplementation = new NFTAuction();
+        nftAuctionProxyAdmin = ProxyAdmin(
+            getProxyAdminAddress(address(proxyAuction))
         );
 
-        nftManagerProxyAdmin.upgradeAndCall(
-            ITransparentUpgradeableProxy(address(nftManager)),
-            address(nftManagerImplementation),
+        nftAuctionProxyAdmin.upgradeAndCall(
+            ITransparentUpgradeableProxy(address(nftAuction)),
+            address(nftAuctionImplementation),
             abi.encodeWithSelector(
-                NFTManager.initialize.selector,
-                "ABC_NFT",
-                "abC",
-                100,
-                "https:abc",
-                deployerAddress
+                NFTAuction.initialize.selector,
+                deployerAddress,
+                500
             )
         );
 
-        console.log("deploy proxyNftManager:", address(proxyNftManager));
+        console.log("deploy proxyAuction:", address(proxyAuction));
     }
 
     function getProxyAdminAddress(

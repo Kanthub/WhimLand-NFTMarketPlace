@@ -25,8 +25,8 @@ contract WhimLandVault is IWhimLandVault, OwnableUpgradeable {
         _;
     }
 
-    function initialize() public initializer {
-        __Ownable_init(_msgSender());
+    function initialize(address _owner) public initializer {
+        __Ownable_init(_owner);
     }
 
     function setOrderBook(address newOrderBook) public onlyOwner {

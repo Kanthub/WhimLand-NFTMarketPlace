@@ -39,8 +39,8 @@ contract NFTManager is
     mapping(uint256 => uint256) public remainingUses; // 剩余核销次数
     mapping(uint256 => mapping(uint256 => bool)) public isPrintExist; // masterId => printNumber => exists, 用于防止重复铸造print edition
     mapping(uint256 => uint256) public fromMaster; // Print edition 来源的 Master ID
-    mapping(address => bool) public isWhiteListed; // 白名单地址
-    mapping(address => bool) public isEditer; // 核销权限地址
+    mapping(address => mapping(uint256 => bool)) public isWhiteListed; // 白名单地址---允许铸造权限
+    mapping(address => mapping(uint256 => bool)) public isEditer; // 核销权限地址
 
     // Metadata
     struct NFTMetadata {
@@ -68,14 +68,25 @@ contract NFTManager is
     event NFTUsed(uint256 tokenID, uint256 remainingUses, uint256 timestamp);
 
     // ============== Modifiers =====================
-    modifier onlyWhiteListed() {
-        require(isWhiteListed[msg.sender], "Not whitelisted");
+    modifier onlyWhiteListed(uint256 masterId) {
+        require(
+            isWhiteListed[msg.sender][masterId] || msg.sender == owner(),
+            "Not whitelisted"
+        );
         _;
     }
 
-    modifier onlyEditer() {
-        require(isEditer[msg.sender], "No Access to eidt");
+    modifier onlyEditer(uint256 tokenId) {
+        _onlyEditer(tokenId);
         _;
+    }
+
+    function _onlyEditer(uint256 tokenId) internal view {
+        uint256 _masterId = fromMaster[tokenId];
+        require(
+            isEditer[msg.sender][_masterId] || msg.sender == owner(),
+            "No Access to eidt"
+        );
     }
 
     constructor() {
@@ -96,45 +107,44 @@ contract NFTManager is
         __ReentrancyGuard_init();
         __Ownable_init(_initialOwner);
         _transferOwnership(_initialOwner);
-
-        isWhiteListed[_initialOwner] = true;
-        isEditer[_initialOwner] = true;
+        __Pausable_init();
     }
 
     receive() external payable {
         emit Received(msg.sender, msg.value);
     }
 
-    // ===================== Mint =====================
-    function mint(address to) public onlyWhiteListed whenNotPaused {
-        require(nextTokenId <= maxSupply, "Exceeds max supply");
-        _safeMint(to, nextTokenId);
-        nextTokenId++;
-    }
+    // // ===================== Mint =====================
+    // function mint(address to) public onlyWhiteListed whenNotPaused {
+    //     require(nextTokenId <= maxSupply, "Exceeds max supply");
+    //     _safeMint(to, nextTokenId);
+    //     nextTokenId++;
+    // }
 
-    function mintBatch(
-        address to,
-        uint256 amount
-    ) public onlyWhiteListed whenNotPaused {
-        require(nextTokenId + amount - 1 <= maxSupply, "Exceeds max supply");
-        for (uint256 i = 0; i < amount; i++) {
-            _safeMint(to, nextTokenId);
-            nextTokenId++;
-        }
-    }
+    // function mintBatch(
+    //     address to,
+    //     uint256 amount
+    // ) public onlyWhiteListed whenNotPaused {
+    //     require(nextTokenId + amount - 1 <= maxSupply, "Exceeds max supply");
+    //     for (uint256 i = 0; i < amount; i++) {
+    //         _safeMint(to, nextTokenId);
+    //         nextTokenId++;
+    //     }
+    // }
 
     // ======================= Mint Master & Print Edition =====================
 
     function mintMaster(
         address to,
         NFTMetadata memory md
-    ) external onlyWhiteListed whenNotPaused returns (uint256) {
+    ) external onlyWhiteListed(nextTokenId) whenNotPaused returns (uint256) {
         uint256 tokenId = nextTokenId++;
         _safeMint(to, tokenId);
         isMaster[tokenId] = true;
         metadata[tokenId] = md;
 
         remainingUses[tokenId] = md.usageLimit; // 初始化剩余使用次数
+
         emit MintedNFT(to, tokenId, tokenId, 0, md.usageLimit);
         return tokenId;
     }
@@ -143,7 +153,7 @@ contract NFTManager is
         address to,
         uint256 masterId,
         uint256 printNumber
-    ) external onlyWhiteListed whenNotPaused returns (uint256) {
+    ) external onlyWhiteListed(masterId) whenNotPaused returns (uint256) {
         require(nextTokenId <= maxSupply, "Exceeds max supply");
         require(isMaster[masterId], "Invalid masterId");
         require(
@@ -183,7 +193,7 @@ contract NFTManager is
         uint256 amount,
         uint256 masterId,
         uint256 startingPrintNumber
-    ) external onlyWhiteListed whenNotPaused {
+    ) external onlyWhiteListed(masterId) whenNotPaused {
         require(nextTokenId + amount - 1 <= maxSupply, "Exceeds max supply");
         require(isMaster[masterId], "Invalid masterId");
         for (uint256 i = 0; i < amount; i++) {
@@ -220,7 +230,10 @@ contract NFTManager is
         address to,
         uint256[] calldata masterIds,
         uint256 totalAmount
-    ) external onlyWhiteListed whenNotPaused {
+    ) external whenNotPaused {
+        for (uint256 i = 0; i < masterIds.length; i++) {
+            require(isWhiteListed[msg.sender][masterIds[i]], "Not whitelisted");
+        } // 检查 msg.sender 是否在所有masterId白名单内
         require(masterIds.length > 0, "No master IDs provided");
         require(
             nextTokenId + totalAmount - 1 <= maxSupply,
@@ -390,7 +403,7 @@ contract NFTManager is
         transferLocked[tokenId] = true;
     }
 
-    function unlockTransfer(uint256 tokenId) external onlyOwner {
+    function unlockTransfer(uint256 tokenId) external {
         _requireOwned(tokenId);
         require(
             msg.sender == owner() || msg.sender == ownerOf(tokenId),
@@ -402,7 +415,7 @@ contract NFTManager is
     // ====================== 核销使用次数, 必须tokenId的拥有者调用 =====================
     function useNFT(
         uint256 tokenId
-    ) public nonReentrant onlyEditer whenNotPaused {
+    ) public nonReentrant onlyEditer(tokenId) whenNotPaused {
         _requireOwned(tokenId);
         require(remainingUses[tokenId] > 0, "No remaining uses");
         remainingUses[tokenId]--;
@@ -455,12 +468,20 @@ contract NFTManager is
     }
 
     // ==================== white list =====================
-    function setWhiteList(address operator, bool approved) public onlyOwner {
-        isWhiteListed[operator] = approved;
+    function setWhiteList(
+        address operator,
+        bool approved,
+        uint256 masterId
+    ) public onlyOwner {
+        isWhiteListed[operator][masterId] = approved;
     }
 
-    function setEditer(address operator, bool approved) public onlyOwner {
-        isEditer[operator] = approved;
+    function setEditer(
+        address operator,
+        bool approved,
+        uint256 masterId
+    ) public onlyOwner {
+        isEditer[operator][masterId] = approved;
     }
 
     // ===================== view functions =====================
@@ -477,6 +498,26 @@ contract NFTManager is
 
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    // Override ERC721Upgradeable, IERC721
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override(ERC721Upgradeable, IERC721) {
+        require(!transferLocked[tokenId], "Transfer locked for this NFT");
+        require(remainingUses[tokenId] > 0, "NFT has no remaining uses");
+
+        if (to == address(0)) {
+            revert ERC721InvalidReceiver(address(0));
+        }
+        // Setting an "auth" arguments enables the `_isAuthorized` check which verifies that the token exists
+        // (from != 0). Therefore, it is not needed to verify that the return value is not 0 here.
+        address previousOwner = _update(to, tokenId, _msgSender());
+        if (previousOwner != from) {
+            revert ERC721IncorrectOwner(from, tokenId, previousOwner);
+        }
     }
 
     // ===================== 支持接口 =====================

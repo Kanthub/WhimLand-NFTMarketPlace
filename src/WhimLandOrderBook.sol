@@ -64,6 +64,10 @@ contract WhimLandOrderBook is
     event BatchMatchInnerError(uint256 offset, bytes msg);
     event LogSkipOrder(OrderKey orderKey, uint64 salt);
 
+    error NotMatchBidETHAmount(uint256 msgValue, uint256 bidETHAmount);
+    error ValueBelowFillPrice(uint256 msgValue, uint256 fillPrice);
+    error BuyPriceBelowFillPrice(uint256 buyPrice, uint256 fillPrice);
+
     modifier onlyDelegateCall() {
         _checkDelegateCall();
         _;
@@ -230,7 +234,9 @@ contract WhimLandOrderBook is
             newOrderKeys[i] = newOrderKey;
         }
 
-        require(msg.value >= bidETHAmount, "HDO: not match bidETHAmount");
+        if (msg.value < bidETHAmount) {
+            revert NotMatchBidETHAmount(msg.value, bidETHAmount);
+        }
         if (msg.value > bidETHAmount) {
             _msgSender().safeTransferETH(msg.value - bidETHAmount);
         }
@@ -350,6 +356,15 @@ contract WhimLandOrderBook is
             filledAmount[LibOrder.hash(order)] == 0 // order cannot be canceled or filled
         ) {
             newOrderKey = LibOrder.hash(order);
+            require(
+                orders[newOrderKey].order.maker == address(0),
+                "WOB: order exist"
+            );
+            // add order to order storage
+            orders[newOrderKey] = LibOrder.DBOrder({
+                order: order,
+                next: LibOrder.ORDERKEY_SENTINEL
+            });
 
             // deposit asset to vault
             if (order.side == LibOrder.Side.List) {
@@ -381,7 +396,7 @@ contract WhimLandOrderBook is
                 }
             }
 
-            _addOrder(order);
+            // _addOrder(order);
 
             emit LogMake(
                 newOrderKey,
@@ -409,7 +424,9 @@ contract WhimLandOrderBook is
             filledAmount[orderKey] < order.nft.amount // only unfilled order can be canceled
         ) {
             OrderKey orderHash = LibOrder.hash(order);
-            _removeOrder(order);
+
+            // _removeOrder(order);
+
             // withdraw asset from vault
             if (order.side == LibOrder.Side.List) {
                 IWhimLandVault(_vault).withdrawNFT(
@@ -477,12 +494,15 @@ contract WhimLandOrderBook is
 
         // cancel old order
         uint256 oldFilledAmount = filledAmount[oldOrderKey];
-        _removeOrder(oldOrder); // remove order from order storage
+
+        // _removeOrder(oldOrder); // remove order from order storage
+
         _cancelOrder(oldOrderKey); // cancel order from order book
         emit LogCancel(oldOrderKey, oldOrder.maker);
 
-        newOrderKey = _addOrder(newOrder); // add new order to order storage
+        // newOrderKey = _addOrder(newOrder); // add new order to order storage
 
+        newOrderKey = LibOrder.hash(newOrder);
         // make new order, change the order key of the asset in the vault
         if (oldOrder.side == LibOrder.Side.List) {
             IWhimLandVault(_vault).editNFT(oldOrderKey, newOrderKey);
@@ -569,7 +589,8 @@ contract WhimLandOrderBook is
             uint128 fillPrice = Price.unwrap(buyOrder.price); // the price of bid order
             if (isSellExist) {
                 // check if sellOrder exist in order storage , del&fill if exist
-                _removeOrder(sellOrder);
+                // _removeOrder(sellOrder);
+
                 _updateFilledAmount(sellOrder.nft.amount, sellOrderKey); // sell order totally filled
             }
             _updateFilledAmount(filledAmount[buyOrderKey] + 1, buyOrderKey);
@@ -656,7 +677,9 @@ contract WhimLandOrderBook is
             // 如果买单存在，从vault提取资金到合约，再把扣款转给卖家
             // 卖家收到钱后，把NFT从vault转给买家
             if (!isBuyExist) {
-                require(msgValue >= fillPrice, "HD: value < fill price");
+                if (msgValue < fillPrice) {
+                    revert ValueBelowFillPrice(msgValue, fillPrice);
+                }
                 if (sellOrder.currency == address(0)) {
                     // 扣除手续费和版税之后转给卖家
                     sellOrder.maker.safeTransferETH(
@@ -690,7 +713,9 @@ contract WhimLandOrderBook is
                 }
             } else {
                 // 如果买单已经存在
-                require(buyPrice >= fillPrice, "HD: buy price < fill price");
+                if (buyPrice < fillPrice) {
+                    revert BuyPriceBelowFillPrice(buyPrice, fillPrice);
+                }
                 if (sellOrder.currency == address(0)) {
                     IWhimLandVault(_vault).withdrawETH(
                         buyOrderKey,
@@ -727,7 +752,8 @@ contract WhimLandOrderBook is
                     }
                 }
                 // check if buyOrder exist in order storage , del&fill if exist
-                _removeOrder(buyOrder);
+                // _removeOrder(buyOrder);
+
                 _updateFilledAmount(filledAmount[buyOrderKey] + 1, buyOrderKey);
             }
             _updateFilledAmount(sellOrder.nft.amount, sellOrderKey);

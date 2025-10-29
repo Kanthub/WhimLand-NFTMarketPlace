@@ -45,6 +45,7 @@ contract NFTAuction is
     uint256 public auctionCount;
     mapping(uint256 => Auction) public auctions;
     mapping(uint256 => mapping(address => uint256)) public pendingReturns;
+    mapping(address => mapping(uint256 => uint256)) public bids; // address => auctionId => amount
 
     event AuctionCreated(
         uint256 auctionId,
@@ -125,43 +126,49 @@ contract NFTAuction is
         require(block.timestamp < auction.endTime, "Auction ended");
         require(!auction.settled, "Auction settled");
 
-        uint256 bidAmount;
+        require(_amount >= auction.minBid, "Bid below min price");
+        require(_amount > auction.highestBid, "Bid not higher than current");
+
+        require(
+            _amount > bids[msg.sender][_auctionId],
+            "New bid must be higher than previous bid"
+        );
+        uint256 bidAmount = _amount - bids[msg.sender][_auctionId]; // 计算差价
+        bids[msg.sender][_auctionId] = _amount;
+
         if (auction.currency == address(0)) {
-            // ETH 出价
-            bidAmount = msg.value;
+            require(msg.value >= bidAmount, "Insufficient ETH sent");
+            msg.sender.safeTransferETH(msg.value - bidAmount); // 返还多余 ETH
         } else {
             // ERC20 出价
             IERC20 token = IERC20(auction.currency);
             require(
-                token.transferFrom(msg.sender, address(this), _amount),
+                token.transferFrom(msg.sender, address(this), bidAmount),
                 "Transfer failed"
             );
-            bidAmount = _amount;
         }
-
-        require(bidAmount >= auction.minBid, "Bid below min price");
-        require(bidAmount > auction.highestBid, "Bid not higher than current");
 
         // 返还上一次最高出价者
         if (auction.highestBid > 0) {
-            pendingReturns[_auctionId][auction.highestBidder] += auction
+            pendingReturns[_auctionId][auction.highestBidder] = auction
                 .highestBid;
         }
 
-        auction.highestBid = bidAmount;
+        auction.highestBid = _amount;
         auction.highestBidder = msg.sender;
 
-        emit BidPlaced(_auctionId, msg.sender, bidAmount);
+        emit BidPlaced(_auctionId, msg.sender, _amount);
     }
 
     // 提现多余资金
     function withdraw(uint256 _auctionId) external nonReentrant whenNotPaused {
+        Auction storage auction = auctions[_auctionId];
         uint256 amount = pendingReturns[_auctionId][msg.sender];
         require(amount > 0, "Nothing to withdraw");
+        require(auction.settled, "Not settled yet");
 
         pendingReturns[_auctionId][msg.sender] = 0;
 
-        Auction storage auction = auctions[_auctionId];
         if (auction.currency == address(0)) {
             payable(msg.sender).transfer(amount);
         } else {
