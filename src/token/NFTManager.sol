@@ -16,6 +16,8 @@ import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 
+import "../interface/IVrfPod.sol";
+
 contract NFTManager is
     Initializable,
     ERC721Upgradeable,
@@ -32,6 +34,7 @@ contract NFTManager is
     uint256 public maxSupply; // 最大供应量
     string public baseURI; // 基础URI
     address public editer;
+    uint256 public nextRequestId;
 
     // Master/Print edition
     mapping(uint256 => bool) public isMaster;
@@ -56,6 +59,16 @@ contract NFTManager is
     // 转移控制
     mapping(uint256 => bool) public transferLocked;
 
+    // 盲盒请求信息
+    struct RequestInfo {
+        address receiver;
+        uint256 totalAmount;
+        uint256[] masterIds;
+        bool fulfilled;
+    }
+    mapping(uint256 => RequestInfo) public requests;
+    IVrfPod public vrfPod;
+
     // ============== Events =====================
     event Received(address indexed sender, uint256 amount);
     event MintedNFT(
@@ -66,6 +79,13 @@ contract NFTManager is
         uint256 usageLimit
     );
     event NFTUsed(uint256 tokenID, uint256 remainingUses, uint256 timestamp);
+    event MintRequested(
+        uint256 requestId,
+        address indexed to,
+        uint256 totalAmount,
+        uint256[] masterIds
+    );
+    event MintCompleted(uint256 requestId, uint256[] chosenMasterIds);
 
     // ============== Modifiers =====================
     modifier onlyWhiteListed(uint256 masterId) {
@@ -98,7 +118,8 @@ contract NFTManager is
         string memory symbol_,
         uint256 maxSupply_,
         string memory baseURI_,
-        address _initialOwner
+        address _initialOwner,
+        address _vrfPod
     ) public initializer {
         maxSupply = maxSupply_;
         baseURI = baseURI_;
@@ -108,13 +129,14 @@ contract NFTManager is
         __Ownable_init(_initialOwner);
         _transferOwnership(_initialOwner);
         __Pausable_init();
+        vrfPod = IVrfPod(_vrfPod);
     }
 
     receive() external payable {
         emit Received(msg.sender, msg.value);
     }
 
-    // // ===================== Mint =====================
+    // // ===================== Normal Mint =====================
     // function mint(address to) public onlyWhiteListed whenNotPaused {
     //     require(nextTokenId <= maxSupply, "Exceeds max supply");
     //     _safeMint(to, nextTokenId);
@@ -226,6 +248,7 @@ contract NFTManager is
         }
     }
 
+    // 发起盲盒请求
     function mintBatchPrintEditionRandomMasters(
         address to,
         uint256[] calldata masterIds,
@@ -240,21 +263,46 @@ contract NFTManager is
             "Exceeds max supply"
         );
 
+        uint256 requestId = ++nextRequestId;
+        requests[requestId] = RequestInfo({
+            receiver: to,
+            totalAmount: totalAmount,
+            masterIds: masterIds,
+            fulfilled: false
+        });
+
+        // 请求随机数
+        vrfPod.requestRandomWords(requestId, totalAmount);
+
+        emit MintRequested(requestId, to, totalAmount, masterIds);
+    }
+
+    // Oracle fulfill 回调
+    // 由 VRF Manager 调用 Pod，然后 Pod 再回调此函数
+    function rawFulfillRandomWords(
+        uint256 requestId,
+        uint256[] calldata randomWords
+    ) external {
+        // 安全：只能来自 VRF Pod
+        require(msg.sender == address(vrfPod), "Unauthorized");
+
+        RequestInfo storage req = requests[requestId];
+        require(!req.fulfilled, "Already fulfilled");
+        require(req.receiver != address(0), "Invalid request");
+
+        uint256[] memory masterIds = req.masterIds;
+        uint256 totalAmount = req.totalAmount;
+        address to = req.receiver;
+
+        uint256[] memory chosen = new uint256[](totalAmount);
+
         for (uint256 i = 0; i < totalAmount; i++) {
-            // 随机选择一个 masterId
-            uint256 randomIndex = uint256(
-                keccak256(
-                    abi.encodePacked(
-                        block.timestamp,
-                        block.prevrandao,
-                        i,
-                        nextTokenId
-                    )
-                )
-            ) % masterIds.length;
+            // 使用随机数选择 Master ID
+            uint256 randomIndex = randomWords[i] % masterIds.length;
 
             uint256 masterId = masterIds[randomIndex];
             require(isMaster[masterId], "Invalid masterId");
+            chosen[i] = masterId;
 
             uint256 tokenId = nextTokenId++;
 
@@ -285,45 +333,10 @@ contract NFTManager is
                 remainingUses[tokenId]
             );
         }
+
+        req.fulfilled = true;
+        emit MintCompleted(requestId, chosen);
     }
-
-    // function mintBatchPrintEditionRandom(
-    //     address to,
-    //     uint256 masterId,
-    //     uint256[] memory printNumbers
-    // ) public onlyWhiteListed whenNotPaused returns (uint256[] memory) {
-    //     require(
-    //         nextTokenId + printNumbers.length - 1 <= maxSupply,
-    //         "Exceeds max supply"
-    //     );
-    //     require(isMaster[masterId], "Invalid masterId");
-    //     uint256[] memory tokenIds = new uint256[](printNumbers.length);
-
-    //     for (uint256 i = 0; i < printNumbers.length; i++) {
-    //         uint256 tokenId = nextTokenId++;
-    //         tokenIds[i] = tokenId;
-
-    //         _safeMint(to, tokenId);
-    //         // 标记为非 Master
-    //         isMaster[tokenId] = false;
-    //         fromMaster[tokenId] = masterId;
-
-    //         // 设置 Print edition 编号
-    //         require(
-    //             !isPrintExist[masterId][printNumbers[i]],
-    //             "Print number already exists"
-    //         );
-    //         printEditionNumber[tokenId] = printNumbers[i];
-    //         isPrintExist[masterId][printNumbers[i]] = true;
-
-    //         // 继承 Master 的 metadata
-    //         metadata[tokenId] = metadata[masterId];
-
-    //         remainingUses[tokenId] = metadata[masterId].usageLimit;
-    //     }
-
-    //     return tokenIds;
-    // }
 
     // ===================== Metadata =====================
     function setBaseURI(string memory _uri) external onlyOwner {
