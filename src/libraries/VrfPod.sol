@@ -36,8 +36,9 @@ contract VrfPod is Initializable, OwnableUpgradeable, VrfPodStorage {
         randomWordsMapping[_requestId] = RandomWordsInfo({fulfilled: true, randomWords: _randomWords});
         emit FillRandomWords(_requestId, _randomWords);
 
-        (bool ok,) =
-            consumer.call(abi.encodeWithSignature("rawFulfillRandomWords(uint256,uint256[])", _requestId, _randomWords));
+        (bool ok,) = nftManager.call(
+            abi.encodeWithSignature("rawFulfillRandomWords(uint256,uint256[])", _requestId, _randomWords)
+        );
         require(ok, "callback failed");
     }
 

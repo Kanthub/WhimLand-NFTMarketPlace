@@ -21,12 +21,15 @@ contract CollectionFactory is Initializable, OwnableUpgradeable {
         __Ownable_init(owner);
     }
 
-    function createCollection(string memory name, string memory symbol, uint256 maxSupply, string memory baseURI)
-        external
-        returns (address)
-    {
+    function createCollection(
+        string memory name,
+        string memory symbol,
+        uint256 maxSupply,
+        string memory baseURI,
+        address vrf
+    ) external returns (address) {
         NFTManager newCol = new NFTManager();
-        newCol.initialize(name, symbol, maxSupply, baseURI, msg.sender);
+        newCol.initialize(name, symbol, maxSupply, baseURI, msg.sender, vrf);
         allCollections.push(address(newCol));
         emit CollectionCreated(address(newCol), name, symbol);
         return address(newCol);
