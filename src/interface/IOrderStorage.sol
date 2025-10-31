@@ -13,16 +13,11 @@ interface IOrderStorage {
         uint256 count,
         Price price,
         OrderKey firstOrderKey
-    )
+    ) external view returns (LibOrder.Order[] memory resultOrders, OrderKey nextOrderKey);
+
+    function getBestOrder(address collection, uint256 tokenId, LibOrder.Side listBid, LibOrder.SaleKind saleKind)
         external
         view
-        returns (LibOrder.Order[] memory resultOrders, OrderKey nextOrderKey);
-
-    function getBestOrder(
-        address collection,
-        uint256 tokenId,
-        LibOrder.Side listBid,
-        LibOrder.SaleKind saleKind
-    ) external view returns (LibOrder.Order memory orderResult);
+        returns (LibOrder.Order memory orderResult);
     // write functions
 }

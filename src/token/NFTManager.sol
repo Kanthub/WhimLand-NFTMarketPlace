@@ -71,28 +71,14 @@ contract NFTManager is
 
     // ============== Events =====================
     event Received(address indexed sender, uint256 amount);
-    event MintedNFT(
-        address indexed to,
-        uint256 tokenId,
-        uint256 masterId,
-        uint256 printNumber,
-        uint256 usageLimit
-    );
+    event MintedNFT(address indexed to, uint256 tokenId, uint256 masterId, uint256 printNumber, uint256 usageLimit);
     event NFTUsed(uint256 tokenID, uint256 remainingUses, uint256 timestamp);
-    event MintRequested(
-        uint256 requestId,
-        address indexed to,
-        uint256 totalAmount,
-        uint256[] masterIds
-    );
+    event MintRequested(uint256 requestId, address indexed to, uint256 totalAmount, uint256[] masterIds);
     event MintCompleted(uint256 requestId, uint256[] chosenMasterIds);
 
     // ============== Modifiers =====================
     modifier onlyWhiteListed(uint256 masterId) {
-        require(
-            isWhiteListed[msg.sender][masterId] || msg.sender == owner(),
-            "Not whitelisted"
-        );
+        require(isWhiteListed[msg.sender][masterId] || msg.sender == owner(), "Not whitelisted");
         _;
     }
 
@@ -103,10 +89,7 @@ contract NFTManager is
 
     function _onlyEditer(uint256 tokenId) internal view {
         uint256 _masterId = fromMaster[tokenId];
-        require(
-            isEditer[msg.sender][_masterId] || msg.sender == owner(),
-            "No Access to eidt"
-        );
+        require(isEditer[msg.sender][_masterId] || msg.sender == owner(), "No Access to eidt");
     }
 
     constructor() {
@@ -156,10 +139,12 @@ contract NFTManager is
 
     // ======================= Mint Master & Print Edition =====================
 
-    function mintMaster(
-        address to,
-        NFTMetadata memory md
-    ) external onlyWhiteListed(nextTokenId) whenNotPaused returns (uint256) {
+    function mintMaster(address to, NFTMetadata memory md)
+        external
+        onlyWhiteListed(nextTokenId)
+        whenNotPaused
+        returns (uint256)
+    {
         uint256 tokenId = nextTokenId++;
         _safeMint(to, tokenId);
         isMaster[tokenId] = true;
@@ -171,17 +156,15 @@ contract NFTManager is
         return tokenId;
     }
 
-    function mintPrintEdition(
-        address to,
-        uint256 masterId,
-        uint256 printNumber
-    ) external onlyWhiteListed(masterId) whenNotPaused returns (uint256) {
+    function mintPrintEdition(address to, uint256 masterId, uint256 printNumber)
+        external
+        onlyWhiteListed(masterId)
+        whenNotPaused
+        returns (uint256)
+    {
         require(nextTokenId <= maxSupply, "Exceeds max supply");
         require(isMaster[masterId], "Invalid masterId");
-        require(
-            !isPrintExist[masterId][printNumber],
-            "Print number already exists"
-        );
+        require(!isPrintExist[masterId][printNumber], "Print number already exists");
 
         uint256 tokenId = nextTokenId++;
 
@@ -200,22 +183,15 @@ contract NFTManager is
 
         remainingUses[tokenId] = metadata[masterId].usageLimit;
 
-        emit MintedNFT(
-            to,
-            tokenId,
-            masterId,
-            printNumber,
-            metadata[tokenId].usageLimit
-        );
+        emit MintedNFT(to, tokenId, masterId, printNumber, metadata[tokenId].usageLimit);
         return tokenId;
     }
 
-    function mintBatchPrintEditionByOrder(
-        address to,
-        uint256 amount,
-        uint256 masterId,
-        uint256 startingPrintNumber
-    ) external onlyWhiteListed(masterId) whenNotPaused {
+    function mintBatchPrintEditionByOrder(address to, uint256 amount, uint256 masterId, uint256 startingPrintNumber)
+        external
+        onlyWhiteListed(masterId)
+        whenNotPaused
+    {
         require(nextTokenId + amount - 1 <= maxSupply, "Exceeds max supply");
         require(isMaster[masterId], "Invalid masterId");
         for (uint256 i = 0; i < amount; i++) {
@@ -238,38 +214,24 @@ contract NFTManager is
             metadata[tokenId] = metadata[masterId];
             remainingUses[tokenId] = metadata[masterId].usageLimit;
 
-            emit MintedNFT(
-                to,
-                tokenId,
-                masterId,
-                startingPrintNumber,
-                remainingUses[tokenId]
-            );
+            emit MintedNFT(to, tokenId, masterId, startingPrintNumber, remainingUses[tokenId]);
         }
     }
 
     // 发起盲盒请求
-    function mintBatchPrintEditionRandomMasters(
-        address to,
-        uint256[] calldata masterIds,
-        uint256 totalAmount
-    ) external whenNotPaused {
+    function mintBatchPrintEditionRandomMasters(address to, uint256[] calldata masterIds, uint256 totalAmount)
+        external
+        whenNotPaused
+    {
         for (uint256 i = 0; i < masterIds.length; i++) {
             require(isWhiteListed[msg.sender][masterIds[i]], "Not whitelisted");
         } // 检查 msg.sender 是否在所有masterId白名单内
         require(masterIds.length > 0, "No master IDs provided");
-        require(
-            nextTokenId + totalAmount - 1 <= maxSupply,
-            "Exceeds max supply"
-        );
+        require(nextTokenId + totalAmount - 1 <= maxSupply, "Exceeds max supply");
 
         uint256 requestId = ++nextRequestId;
-        requests[requestId] = RequestInfo({
-            receiver: to,
-            totalAmount: totalAmount,
-            masterIds: masterIds,
-            fulfilled: false
-        });
+        requests[requestId] =
+            RequestInfo({receiver: to, totalAmount: totalAmount, masterIds: masterIds, fulfilled: false});
 
         // 请求随机数
         vrfPod.requestRandomWords(requestId, totalAmount);
@@ -279,10 +241,7 @@ contract NFTManager is
 
     // Oracle fulfill 回调
     // 由 VRF Manager 调用 Pod，然后 Pod 再回调此函数
-    function rawFulfillRandomWords(
-        uint256 requestId,
-        uint256[] calldata randomWords
-    ) external {
+    function rawFulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) external {
         // 安全：只能来自 VRF Pod
         require(msg.sender == address(vrfPod), "Unauthorized");
 
@@ -325,13 +284,7 @@ contract NFTManager is
             metadata[tokenId] = metadata[masterId];
             remainingUses[tokenId] = metadata[masterId].usageLimit;
 
-            emit MintedNFT(
-                to,
-                tokenId,
-                masterId,
-                startingPrintNumber,
-                remainingUses[tokenId]
-            );
+            emit MintedNFT(to, tokenId, masterId, startingPrintNumber, remainingUses[tokenId]);
         }
 
         req.fulfilled = true;
@@ -343,21 +296,14 @@ contract NFTManager is
         baseURI = _uri;
     }
 
-    function tokenURL(
-        uint256 tokenId
-    ) public view virtual returns (string memory) {
+    function tokenURL(uint256 tokenId) public view virtual returns (string memory) {
         _requireOwned(tokenId);
 
         string memory basedURI = _baseURI();
-        return
-            bytes(basedURI).length > 0
-                ? string.concat(baseURI, tokenId.toString(), ".json")
-                : "";
+        return bytes(basedURI).length > 0 ? string.concat(baseURI, tokenId.toString(), ".json") : "";
     }
 
-    function tokenURI(
-        uint256 tokenId
-    )
+    function tokenURI(uint256 tokenId)
         public
         view
         override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
@@ -386,17 +332,15 @@ contract NFTManager is
         string memory jsonBase64 = Base64.encode(bytes(json));
 
         // 返回严格符合 ERC721 标准的 Data URI
-        return
-            string(
-                abi.encodePacked("data:application/json;base64,", jsonBase64)
-            );
+        return string(abi.encodePacked("data:application/json;base64,", jsonBase64));
     }
 
     // ===================== 版税（EIP-2981） =====================
-    function royaltyInfo(
-        uint256 tokenId,
-        uint256 salePrice
-    ) public view returns (address receiver, uint256 royaltyAmount) {
+    function royaltyInfo(uint256 tokenId, uint256 salePrice)
+        public
+        view
+        returns (address receiver, uint256 royaltyAmount)
+    {
         NFTMetadata memory md = metadata[tokenId];
         receiver = md.royaltyReceiver;
         if (receiver == address(0) || md.royaltyBps == 0) {
@@ -409,26 +353,18 @@ contract NFTManager is
     // ===================== 转移规则 =====================
     function lockTransfer(uint256 tokenId) external {
         _requireOwned(tokenId);
-        require(
-            msg.sender == owner() || msg.sender == ownerOf(tokenId),
-            "Not authorized"
-        );
+        require(msg.sender == owner() || msg.sender == ownerOf(tokenId), "Not authorized");
         transferLocked[tokenId] = true;
     }
 
     function unlockTransfer(uint256 tokenId) external {
         _requireOwned(tokenId);
-        require(
-            msg.sender == owner() || msg.sender == ownerOf(tokenId),
-            "Not authorized"
-        );
+        require(msg.sender == owner() || msg.sender == ownerOf(tokenId), "Not authorized");
         transferLocked[tokenId] = false;
     }
 
     // ====================== 核销使用次数, 必须tokenId的拥有者调用 =====================
-    function useNFT(
-        uint256 tokenId
-    ) public nonReentrant onlyEditer(tokenId) whenNotPaused {
+    function useNFT(uint256 tokenId) public nonReentrant onlyEditer(tokenId) whenNotPaused {
         _requireOwned(tokenId);
         require(remainingUses[tokenId] > 0, "No remaining uses");
         remainingUses[tokenId]--;
@@ -465,42 +401,25 @@ contract NFTManager is
         maxSupply = maxSupply_;
     }
 
-    function setRoyaltyInfo(
-        uint256 tokenId,
-        address receiver,
-        uint96 royaltyBps
-    ) external {
+    function setRoyaltyInfo(uint256 tokenId, address receiver, uint96 royaltyBps) external {
         _requireOwned(tokenId);
-        require(
-            msg.sender == owner() || msg.sender == ownerOf(tokenId),
-            "Not authorized"
-        );
+        require(msg.sender == owner() || msg.sender == ownerOf(tokenId), "Not authorized");
         require(receiver != address(0), "Invalid receiver");
         metadata[tokenId].royaltyReceiver = receiver;
         metadata[tokenId].royaltyBps = royaltyBps;
     }
 
     // ==================== white list =====================
-    function setWhiteList(
-        address operator,
-        bool approved,
-        uint256 masterId
-    ) public onlyOwner {
+    function setWhiteList(address operator, bool approved, uint256 masterId) public onlyOwner {
         isWhiteListed[operator][masterId] = approved;
     }
 
-    function setEditer(
-        address operator,
-        bool approved,
-        uint256 masterId
-    ) public onlyOwner {
+    function setEditer(address operator, bool approved, uint256 masterId) public onlyOwner {
         isEditer[operator][masterId] = approved;
     }
 
     // ===================== view functions =====================
-    function getMetadata(
-        uint256 tokenId
-    ) external view returns (NFTMetadata memory) {
+    function getMetadata(uint256 tokenId) external view returns (NFTMetadata memory) {
         _requireOwned(tokenId);
         return metadata[tokenId];
     }
@@ -514,11 +433,11 @@ contract NFTManager is
     }
 
     // Override ERC721Upgradeable, IERC721
-    function transferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public virtual override(ERC721Upgradeable, IERC721) {
+    function transferFrom(address from, address to, uint256 tokenId)
+        public
+        virtual
+        override(ERC721Upgradeable, IERC721)
+    {
         require(!transferLocked[tokenId], "Transfer locked for this NFT");
         require(remainingUses[tokenId] > 0, "NFT has no remaining uses");
 
@@ -534,17 +453,13 @@ contract NFTManager is
     }
 
     // ===================== 支持接口 =====================
-    function supportsInterface(
-        bytes4 interfaceId
-    )
+    function supportsInterface(bytes4 interfaceId)
         public
         view
         virtual
         override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
         returns (bool)
     {
-        return
-            interfaceId == type(IERC2981).interfaceId ||
-            super.supportsInterface(interfaceId);
+        return interfaceId == type(IERC2981).interfaceId || super.supportsInterface(interfaceId);
     }
 }

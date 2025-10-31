@@ -11,11 +11,7 @@ import {LibOrder, OrderKey} from "./libraries/LibOrder.sol";
 /**
  * @title Verify the validity of the order parameters.
  */
-abstract contract OrderValidator is
-    Initializable,
-    ContextUpgradeable,
-    EIP712Upgradeable
-{
+abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upgradeable {
     bytes4 private constant EIP_1271_MAGIC_VALUE = 0x1626ba7e;
 
     uint256 private constant CANCELLED = type(uint256).max;
@@ -25,10 +21,7 @@ abstract contract OrderValidator is
     // Value CANCELLED means the order has been canceled.
     mapping(OrderKey => uint256) public filledAmount;
 
-    function __OrderValidator_init(
-        string memory EIP712Name,
-        string memory EIP712Version
-    ) internal onlyInitializing {
+    function __OrderValidator_init(string memory EIP712Name, string memory EIP712Version) internal onlyInitializing {
         __Context_init();
         __EIP712_init(EIP712Name, EIP712Version);
         __OrderValidator_init_unchained();
@@ -44,26 +37,23 @@ abstract contract OrderValidator is
     function _validateOrder(
         LibOrder.Order memory order,
         bool isSkipExpiry // if true, skip expiry check, used for order book query
-    ) internal view {
+    )
+        internal
+        view
+    {
         // Order must have a maker.
         require(order.maker != address(0), "OVa: miss maker");
         // Order must be started and not be expired.
 
         if (!isSkipExpiry) {
             // Skip expiry check if true.
-            require(
-                order.expiry == 0 || order.expiry > block.timestamp,
-                "OVa: expired"
-            );
+            require(order.expiry == 0 || order.expiry > block.timestamp, "OVa: expired");
         }
         // Order salt cannot be 0.
         require(order.salt != 0, "OVa: zero salt");
 
         if (order.side == LibOrder.Side.List) {
-            require(
-                order.nft.collectionAddr != address(0),
-                "OVa: unsupported nft asset"
-            );
+            require(order.nft.collectionAddr != address(0), "OVa: unsupported nft asset");
         } else if (order.side == LibOrder.Side.Bid) {
             require(Price.unwrap(order.price) > 0, "OVa: zero price");
         }
@@ -74,9 +64,7 @@ abstract contract OrderValidator is
      * @param orderKey  The hash of the order.
      * @return orderFilledAmount Has completed fill amount of sell order (0 if order is unfilled).
      */
-    function _getFilledAmount(
-        OrderKey orderKey
-    ) internal view returns (uint256 orderFilledAmount) {
+    function _getFilledAmount(OrderKey orderKey) internal view returns (uint256 orderFilledAmount) {
         // Get has completed fill amount.
         orderFilledAmount = filledAmount[orderKey];
         // Cancelled order cannot be matched.
@@ -88,10 +76,7 @@ abstract contract OrderValidator is
      * @param newAmount  New fill amount of order.
      * @param orderKey  The hash of the order.
      */
-    function _updateFilledAmount(
-        uint256 newAmount,
-        OrderKey orderKey
-    ) internal {
+    function _updateFilledAmount(uint256 newAmount, OrderKey orderKey) internal {
         require(newAmount != CANCELLED, "OVa: canceled");
         filledAmount[orderKey] = newAmount;
     }

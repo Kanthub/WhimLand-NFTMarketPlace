@@ -13,12 +13,7 @@ import {LibTransferSafeUpgradeable, IERC721} from "./libraries/LibTransferSafeUp
 
 import {NFTManager} from "./token/NFTManager.sol";
 
-contract NFTAuction is
-    ReentrancyGuardUpgradeable,
-    ContextUpgradeable,
-    OwnableUpgradeable,
-    PausableUpgradeable
-{
+contract NFTAuction is ReentrancyGuardUpgradeable, ContextUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
     using LibTransferSafeUpgradeable for IERC721;
     using LibTransferSafeUpgradeable for address;
@@ -67,10 +62,7 @@ contract NFTAuction is
         _disableInitializers();
     }
 
-    function initialize(
-        address _initialOwner,
-        uint256 _perFee
-    ) public initializer {
+    function initialize(address _initialOwner, uint256 _perFee) public initializer {
         __Context_init();
         __Ownable_init(_initialOwner);
         perFee = _perFee;
@@ -87,11 +79,7 @@ contract NFTAuction is
         require(_duration > 0, "Duration must be > 0");
 
         // 托管 NFT 到合约
-        IERC721(_nftCollection).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _tokenId
-        );
+        IERC721(_nftCollection).safeTransferFrom(msg.sender, address(this), _tokenId);
 
         auctionCount++;
         auctions[auctionCount] = Auction({
@@ -118,10 +106,7 @@ contract NFTAuction is
     }
 
     // 参与拍卖
-    function placeBid(
-        uint256 _auctionId,
-        uint256 _amount
-    ) external payable nonReentrant whenNotPaused {
+    function placeBid(uint256 _auctionId, uint256 _amount) external payable nonReentrant whenNotPaused {
         Auction storage auction = auctions[_auctionId];
         require(block.timestamp < auction.endTime, "Auction ended");
         require(!auction.settled, "Auction settled");
@@ -129,10 +114,7 @@ contract NFTAuction is
         require(_amount >= auction.minBid, "Bid below min price");
         require(_amount > auction.highestBid, "Bid not higher than current");
 
-        require(
-            _amount > bids[msg.sender][_auctionId],
-            "New bid must be higher than previous bid"
-        );
+        require(_amount > bids[msg.sender][_auctionId], "New bid must be higher than previous bid");
         uint256 bidAmount = _amount - bids[msg.sender][_auctionId]; // 计算差价
         bids[msg.sender][_auctionId] = _amount;
 
@@ -142,16 +124,12 @@ contract NFTAuction is
         } else {
             // ERC20 出价
             IERC20 token = IERC20(auction.currency);
-            require(
-                token.transferFrom(msg.sender, address(this), bidAmount),
-                "Transfer failed"
-            );
+            require(token.transferFrom(msg.sender, address(this), bidAmount), "Transfer failed");
         }
 
         // 返还上一次最高出价者
         if (auction.highestBid > 0) {
-            pendingReturns[_auctionId][auction.highestBidder] = auction
-                .highestBid;
+            pendingReturns[_auctionId][auction.highestBidder] = auction.highestBid;
         }
 
         auction.highestBid = _amount;
@@ -177,9 +155,7 @@ contract NFTAuction is
     }
 
     // 拍卖结算
-    function settleAuction(
-        uint256 _auctionId
-    ) external nonReentrant whenNotPaused {
+    function settleAuction(uint256 _auctionId) external nonReentrant whenNotPaused {
         Auction storage auction = auctions[_auctionId];
         require(block.timestamp >= auction.endTime, "Auction not ended");
         require(!auction.settled, "Already settled");
@@ -189,49 +165,28 @@ contract NFTAuction is
         // 计算手续费
         uint256 auctionFee = (auction.highestBid * perFee) / 10000;
         // 计算版税
-        (address royaltyReceiver, uint256 royaltyFee) = NFTManager(
-            payable(auction.nftCollection)
-        ).royaltyInfo(auction.tokenId, auction.highestBid);
+        (address royaltyReceiver, uint256 royaltyFee) =
+            NFTManager(payable(auction.nftCollection)).royaltyInfo(auction.tokenId, auction.highestBid);
 
         if (auction.highestBidder != address(0)) {
             // 赢家获得 NFT
-            IERC721(auction.nftCollection).safeTransferFrom(
-                address(this),
-                auction.highestBidder,
-                auction.tokenId
-            );
+            IERC721(auction.nftCollection).safeTransferFrom(address(this), auction.highestBidder, auction.tokenId);
 
             // 卖家收款(扣除手续费和版税)
             if (auction.currency == address(0)) {
-                auction.seller.safeTransferETH(
-                    auction.highestBid - auctionFee - royaltyFee
-                );
+                auction.seller.safeTransferETH(auction.highestBid - auctionFee - royaltyFee);
                 // 版税发送给创作者
                 royaltyReceiver.safeTransferETH(royaltyFee);
             } else {
-                IERC20(auction.currency).safeTransfer(
-                    auction.seller,
-                    auction.highestBid - auctionFee - royaltyFee
-                );
-                IERC20(auction.currency).safeTransfer(
-                    royaltyReceiver,
-                    royaltyFee
-                );
+                IERC20(auction.currency).safeTransfer(auction.seller, auction.highestBid - auctionFee - royaltyFee);
+                IERC20(auction.currency).safeTransfer(royaltyReceiver, royaltyFee);
             }
         } else {
             // 没有人出价，退回 NFT 给卖家
-            IERC721(auction.nftCollection).safeTransferFrom(
-                address(this),
-                auction.seller,
-                auction.tokenId
-            );
+            IERC721(auction.nftCollection).safeTransferFrom(address(this), auction.seller, auction.tokenId);
         }
 
-        emit AuctionSettled(
-            _auctionId,
-            auction.highestBidder,
-            auction.highestBid
-        );
+        emit AuctionSettled(_auctionId, auction.highestBidder, auction.highestBid);
     }
 
     function pause() external onlyOwner {
@@ -242,19 +197,12 @@ contract NFTAuction is
         _unpause();
     }
 
-    function withdrawETH(
-        address recipient,
-        uint256 amount
-    ) external nonReentrant onlyOwner {
+    function withdrawETH(address recipient, uint256 amount) external nonReentrant onlyOwner {
         recipient.safeTransferETH(amount);
         emit LogWithdrawETH(recipient, amount);
     }
 
-    function withdrawERC20(
-        address recipient,
-        address token,
-        uint256 amount
-    ) external nonReentrant onlyOwner {
+    function withdrawERC20(address recipient, address token, uint256 amount) external nonReentrant onlyOwner {
         IERC20(token).safeTransfer(recipient, amount);
         emit LogWithdrawERC20(recipient, token, amount);
     }
@@ -264,12 +212,7 @@ contract NFTAuction is
         perFee = _perFee;
     }
 
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes memory
-    ) public virtual returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes memory) public virtual returns (bytes4) {
         return this.onERC721Received.selector;
     }
 

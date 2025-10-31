@@ -17,12 +17,10 @@ contract OrderStorage is Initializable {
     mapping(OrderKey => LibOrder.DBOrder) public orders;
 
     /// @dev price tree for each collection and side, sorted by price
-    mapping(address => mapping(LibOrder.Side => RedBlackTreeLibrary.Tree))
-        public priceTrees;
+    mapping(address => mapping(LibOrder.Side => RedBlackTreeLibrary.Tree)) public priceTrees;
 
     /// @dev order queue for each collection, side and expecially price, sorted by orderKey
-    mapping(address => mapping(LibOrder.Side => mapping(Price => LibOrder.OrderQueue)))
-        public orderQueues;
+    mapping(address => mapping(LibOrder.Side => mapping(Price => LibOrder.OrderQueue))) public orderQueues;
 
     function __OrderStorage_init() internal onlyInitializing {}
 
@@ -35,21 +33,16 @@ contract OrderStorage is Initializable {
     }
 
     // 获得最佳价格， 买单最高价， 卖单最低价
-    function getBestPrice(
-        address collection,
-        LibOrder.Side side
-    ) public view returns (Price price) {
-        price = (side == LibOrder.Side.Bid)
-            ? priceTrees[collection][side].last()
-            : priceTrees[collection][side].first();
+    function getBestPrice(address collection, LibOrder.Side side) public view returns (Price price) {
+        price = (side == LibOrder.Side.Bid) ? priceTrees[collection][side].last() : priceTrees[collection][side].first();
     }
 
     // 获得次佳价格， 买单次高价， 卖单次低价
-    function getNextBestPrice(
-        address collection,
-        LibOrder.Side side,
-        Price price
-    ) public view returns (Price nextBestPrice) {
+    function getNextBestPrice(address collection, LibOrder.Side side, Price price)
+        public
+        view
+        returns (Price nextBestPrice)
+    {
         if (RedBlackTreeLibrary.isEmpty(price)) {
             nextBestPrice = (side == LibOrder.Side.Bid)
                 ? priceTrees[collection][side].last()
@@ -337,11 +330,9 @@ contract OrderStorage is Initializable {
     //     }
     // }
 
-    function getOrderKey(
-        LibOrder.Order[] memory order
-    ) public pure returns (OrderKey[] memory orderKeys) {
+    function getOrderKey(LibOrder.Order[] memory order) public pure returns (OrderKey[] memory orderKeys) {
         orderKeys = new OrderKey[](order.length);
-        for (uint256 i; i < order.length; ) {
+        for (uint256 i; i < order.length;) {
             orderKeys[i] = LibOrder.hash(order[i]);
             unchecked {
                 ++i;

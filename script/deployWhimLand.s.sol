@@ -28,60 +28,34 @@ contract DeployerCpChainBridge is Script {
 
         emptyContract = new EmptyContract();
 
-        TransparentUpgradeableProxy proxyWhimLandVault = new TransparentUpgradeableProxy(
-                address(emptyContract),
-                deployerAddress,
-                ""
-            );
+        TransparentUpgradeableProxy proxyWhimLandVault =
+            new TransparentUpgradeableProxy(address(emptyContract), deployerAddress, "");
         whimLandVault = WhimLandVault(payable(address(proxyWhimLandVault)));
         whimLandVaultImplementation = new WhimLandVault();
-        whimLandVaultProxyAdmin = ProxyAdmin(
-            getProxyAdminAddress(address(proxyWhimLandVault))
-        );
+        whimLandVaultProxyAdmin = ProxyAdmin(getProxyAdminAddress(address(proxyWhimLandVault)));
 
-        TransparentUpgradeableProxy proxyWhimLandOrderBook = new TransparentUpgradeableProxy(
-                address(emptyContract),
-                deployerAddress,
-                ""
-            );
-        whimLandOrderBook = WhimLandOrderBook(
-            payable(address(proxyWhimLandOrderBook))
-        );
+        TransparentUpgradeableProxy proxyWhimLandOrderBook =
+            new TransparentUpgradeableProxy(address(emptyContract), deployerAddress, "");
+        whimLandOrderBook = WhimLandOrderBook(payable(address(proxyWhimLandOrderBook)));
         whimLandOrderBookImplementation = new WhimLandOrderBook();
-        whimLandOrderBookProxyAdmin = ProxyAdmin(
-            getProxyAdminAddress(address(proxyWhimLandOrderBook))
-        );
+        whimLandOrderBookProxyAdmin = ProxyAdmin(getProxyAdminAddress(address(proxyWhimLandOrderBook)));
 
         whimLandVaultProxyAdmin.upgradeAndCall(
             ITransparentUpgradeableProxy(address(whimLandVault)),
             address(whimLandVaultImplementation),
-            abi.encodeWithSelector(
-                WhimLandVault.initialize.selector,
-                deployerAddress
-            )
+            abi.encodeWithSelector(WhimLandVault.initialize.selector, deployerAddress)
         );
         whimLandOrderBookProxyAdmin.upgradeAndCall(
             ITransparentUpgradeableProxy(address(whimLandOrderBook)),
             address(whimLandOrderBookImplementation),
-            abi.encodeWithSelector(
-                WhimLandOrderBook.initialize.selector,
-                100,
-                address(whimLandVault),
-                "abc",
-                "abc"
-            )
+            abi.encodeWithSelector(WhimLandOrderBook.initialize.selector, 100, address(whimLandVault), "abc", "abc")
         );
 
         console.log("deploy proxyWhimLandVault:", address(proxyWhimLandVault));
-        console.log(
-            "deploy proxyWhimLandOrderBook:",
-            address(proxyWhimLandOrderBook)
-        );
+        console.log("deploy proxyWhimLandOrderBook:", address(proxyWhimLandOrderBook));
     }
 
-    function getProxyAdminAddress(
-        address proxy
-    ) internal view returns (address) {
+    function getProxyAdminAddress(address proxy) internal view returns (address) {
         address CHEATCODE_ADDRESS = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D;
         Vm vm = Vm(CHEATCODE_ADDRESS);
 

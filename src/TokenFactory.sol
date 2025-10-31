@@ -11,11 +11,7 @@ import "./token/ERC20Manager.sol";
 contract CollectionFactory is Initializable, OwnableUpgradeable {
     address[] public allCollections;
 
-    event CollectionCreated(
-        address collectionAddress,
-        string name,
-        string symbol
-    );
+    event CollectionCreated(address collectionAddress, string name, string symbol);
 
     constructor() {
         _disableInitializers();
@@ -25,12 +21,10 @@ contract CollectionFactory is Initializable, OwnableUpgradeable {
         __Ownable_init(owner);
     }
 
-    function createCollection(
-        string memory name,
-        string memory symbol,
-        uint256 maxSupply,
-        string memory baseURI
-    ) external returns (address) {
+    function createCollection(string memory name, string memory symbol, uint256 maxSupply, string memory baseURI)
+        external
+        returns (address)
+    {
         NFTManager newCol = new NFTManager();
         newCol.initialize(name, symbol, maxSupply, baseURI, msg.sender);
         allCollections.push(address(newCol));
@@ -38,12 +32,10 @@ contract CollectionFactory is Initializable, OwnableUpgradeable {
         return address(newCol);
     }
 
-    function createERC20(
-        string memory name,
-        string memory symbol,
-        uint256 initialSupply,
-        address owner
-    ) external returns (address) {
+    function createERC20(string memory name, string memory symbol, uint256 initialSupply, address owner)
+        external
+        returns (address)
+    {
         ERC20Manager newToken = new ERC20Manager();
         newToken.initialize(name, symbol, initialSupply, owner);
 

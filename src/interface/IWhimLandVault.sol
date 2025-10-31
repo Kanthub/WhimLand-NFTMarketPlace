@@ -12,9 +12,7 @@ interface IWhimLandVault {
      * @return ETHAmount The amount of ETH in the order.
      * @return tokenId The tokenId of the NFT in the order.
      */
-    function balanceOf(
-        OrderKey orderKey
-    ) external view returns (uint256 ETHAmount, uint256 tokenId);
+    function balanceOf(OrderKey orderKey) external view returns (uint256 ETHAmount, uint256 tokenId);
 
     /**
      * @notice Deposit ETH to the order when creating a Bid order.
@@ -29,11 +27,7 @@ interface IWhimLandVault {
      * @param ETHAmount The amount of ETH to withdraw.
      * @param to The address to receive the ETH.
      */
-    function withdrawETH(
-        OrderKey orderKey,
-        uint256 ETHAmount,
-        address to
-    ) external;
+    function withdrawETH(OrderKey orderKey, uint256 ETHAmount, address to) external;
 
     /**
      * @notice Deposit NFT to the order when creating a List order.
@@ -42,12 +36,7 @@ interface IWhimLandVault {
      * @param collection The address of the NFT collection.
      * @param tokenId The tokenId of the NFT.
      */
-    function depositNFT(
-        OrderKey orderKey,
-        address from,
-        address collection,
-        uint256 tokenId
-    ) external;
+    function depositNFT(OrderKey orderKey, address from, address collection, uint256 tokenId) external;
 
     /**
      * @notice Withdraw NFT from the order when the order is canceled.
@@ -56,12 +45,7 @@ interface IWhimLandVault {
      * @param collection The address of the NFT collection.
      * @param tokenId The tokenId of the NFT.
      */
-    function withdrawNFT(
-        OrderKey orderKey,
-        address to,
-        address collection,
-        uint256 tokenId
-    ) external;
+    function withdrawNFT(OrderKey orderKey, address to, address collection, uint256 tokenId) external;
 
     /**
      * @notice Edit the order's NFT when editing order.
@@ -91,10 +75,7 @@ interface IWhimLandVault {
      * @param to The address to receive the NFTs.
      * @param assets The array of NFT info.
      */
-    function batchTransferERC721(
-        address to,
-        LibOrder.NFTInfo[] calldata assets
-    ) external;
+    function batchTransferERC721(address to, LibOrder.NFTInfo[] calldata assets) external;
 
     /**
      * @notice Transfer ERC721 NFT.
@@ -102,25 +83,11 @@ interface IWhimLandVault {
      * @param to The address to receive the NFT.
      * @param assets The NFT info.
      */
-    function transferERC721(
-        address from,
-        address to,
-        LibOrder.Asset calldata assets
-    ) external;
+    function transferERC721(address from, address to, LibOrder.Asset calldata assets) external;
 
-    function depositERC20(
-        OrderKey orderKey,
-        uint256 ERC20Amount,
-        address currency,
-        address from
-    ) external;
+    function depositERC20(OrderKey orderKey, uint256 ERC20Amount, address currency, address from) external;
 
-    function withdrawERC20(
-        OrderKey orderKey,
-        uint256 ERC20Amount,
-        address currency,
-        address to
-    ) external;
+    function withdrawERC20(OrderKey orderKey, uint256 ERC20Amount, address currency, address to) external;
 
     function editERC20(
         OrderKey oldOrderKey,

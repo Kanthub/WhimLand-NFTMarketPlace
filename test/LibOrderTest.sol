@@ -6,9 +6,7 @@ import {LibOrder, OrderKey} from "../src/libraries/LibOrder.sol";
 contract LibOrderTest {
     using LibOrder for LibOrder.Order;
 
-    function getOrderHash(
-        LibOrder.Order memory order
-    ) public pure returns (OrderKey) {
+    function getOrderHash(LibOrder.Order memory order) public pure returns (OrderKey) {
         return order.hash();
     }
 }

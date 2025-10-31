@@ -13,16 +13,12 @@ abstract contract ProtocolManager is Initializable, OwnableUpgradeable {
 
     event LogUpdatedProtocolShare(uint128 indexed newProtocolShare);
 
-    function __ProtocolManager_init(
-        uint128 newProtocolShare
-    ) internal onlyInitializing {
+    function __ProtocolManager_init(uint128 newProtocolShare) internal onlyInitializing {
         // __Ownable_init(_msgSender());
         __ProtocolManager_init_unchained(newProtocolShare);
     }
 
-    function __ProtocolManager_init_unchained(
-        uint128 newProtocolShare
-    ) internal onlyInitializing {
+    function __ProtocolManager_init_unchained(uint128 newProtocolShare) internal onlyInitializing {
         _setProtocolShare(newProtocolShare);
     }
 
@@ -31,10 +27,7 @@ abstract contract ProtocolManager is Initializable, OwnableUpgradeable {
     }
 
     function _setProtocolShare(uint128 newProtocolShare) internal {
-        require(
-            newProtocolShare <= LibPayInfo.MAX_PROTOCOL_SHARE,
-            "PM: exceed max protocol share"
-        );
+        require(newProtocolShare <= LibPayInfo.MAX_PROTOCOL_SHARE, "PM: exceed max protocol share");
         protocolShare = newProtocolShare;
         emit LogUpdatedProtocolShare(newProtocolShare);
     }

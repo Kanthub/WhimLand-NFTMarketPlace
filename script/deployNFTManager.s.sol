@@ -24,36 +24,22 @@ contract DeployerCpChainBridge is Script {
 
         emptyContract = new EmptyContract();
 
-        TransparentUpgradeableProxy proxyNftManager = new TransparentUpgradeableProxy(
-                address(emptyContract),
-                deployerAddress,
-                ""
-            );
+        TransparentUpgradeableProxy proxyNftManager =
+            new TransparentUpgradeableProxy(address(emptyContract), deployerAddress, "");
         nftManager = NFTManager(payable(address(proxyNftManager)));
         nftManagerImplementation = new NFTManager();
-        nftManagerProxyAdmin = ProxyAdmin(
-            getProxyAdminAddress(address(proxyNftManager))
-        );
+        nftManagerProxyAdmin = ProxyAdmin(getProxyAdminAddress(address(proxyNftManager)));
 
         nftManagerProxyAdmin.upgradeAndCall(
             ITransparentUpgradeableProxy(address(nftManager)),
             address(nftManagerImplementation),
-            abi.encodeWithSelector(
-                NFTManager.initialize.selector,
-                "ABC_NFT",
-                "abC",
-                100,
-                "https:abc",
-                deployerAddress
-            )
+            abi.encodeWithSelector(NFTManager.initialize.selector, "ABC_NFT", "abC", 100, "https:abc", deployerAddress)
         );
 
         console.log("deploy proxyNftManager:", address(proxyNftManager));
     }
 
-    function getProxyAdminAddress(
-        address proxy
-    ) internal view returns (address) {
+    function getProxyAdminAddress(address proxy) internal view returns (address) {
         address CHEATCODE_ADDRESS = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D;
         Vm vm = Vm(CHEATCODE_ADDRESS);
 
