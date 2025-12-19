@@ -50,7 +50,7 @@ contract NFTManager is
     struct NFTMetadata {
         string name;
         string description;
-        string image; // 图片 URL
+        string metadataURL; // 元数据URL
         uint96 royaltyBps; // 版税，单位 BP（500 = 5%）
         address royaltyReceiver; // 版税收款地址
         uint256 usageLimit; // 可使用次数
@@ -373,18 +373,6 @@ contract NFTManager is
         baseURI = _uri;
     }
 
-    function tokenURL(
-        uint256 tokenId
-    ) public view virtual returns (string memory) {
-        _requireOwned(tokenId);
-
-        string memory basedURI = _baseURI();
-        return
-            bytes(basedURI).length > 0
-                ? string.concat(baseURI, tokenId.toString(), ".json")
-                : "";
-    }
-
     function tokenURI(
         uint256 tokenId
     )
@@ -397,29 +385,7 @@ contract NFTManager is
 
         NFTMetadata memory md = metadata[tokenId];
 
-        // JSON metadata
-        string memory json = string(
-            abi.encodePacked(
-                '{"name":"',
-                md.name,
-                '","description":"',
-                md.description,
-                '","image":"',
-                md.image,
-                '","attributes":[{"trait_type":"usageLimit","value":"',
-                Strings.toString(md.usageLimit),
-                '"}]}'
-            )
-        );
-
-        // Base64 编码 JSON
-        string memory jsonBase64 = Base64.encode(bytes(json));
-
-        // 返回严格符合 ERC721 标准的 Data URI
-        return
-            string(
-                abi.encodePacked("data:application/json;base64,", jsonBase64)
-            );
+        return md.metadataURL;
     }
 
     // ===================== 版税（EIP-2981） =====================

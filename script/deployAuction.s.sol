@@ -46,6 +46,10 @@ contract DeployerCpChainBridge is Script {
         );
 
         console.log("deploy proxyAuction:", address(proxyAuction));
+        console.log(
+            "Implementation Auction:",
+            address(nftAuctionImplementation)
+        );
     }
 
     function getProxyAdminAddress(
@@ -58,3 +62,15 @@ contract DeployerCpChainBridge is Script {
         return address(uint160(uint256(adminSlot)));
     }
 }
+
+/*
+To deploy and verify on Dolphin Node Testnet, run the following command:
+
+    forge script script/deployAuction.s.sol:DeployerCpChainBridge \
+    --rpc-url $DOL_TESTNET_RPC_URL \
+    --private-key $PRIVATE_KEY_WHIM \
+    --broadcast \
+    --verify \
+    --verifier blockscout \
+    --verifier-url https://explorer-testnet.dolphinode.world/api/
+*/

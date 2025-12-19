@@ -39,22 +39,26 @@ contract DeployerCpChainBridge is Script {
             address(nftManagerImplementation),
             abi.encodeWithSelector(
                 NFTManager.initialize.selector,
-                "ABC_NFT",
-                "abC",
+                "Whimland_NFT",
+                "whim",
                 100,
-                "https:abc",
+                "https://whimlandnft.com/api/v1/nft/{id}",
                 deployerAddress,
                 deployerAddress
             )
         );
 
         console.log("deploy proxyNftManager:", address(proxyNftManager));
+        console.log(
+            "Implementation NFTManager:",
+            address(nftManagerImplementation)
+        );
 
         // mint a master NFT
         NFTManager.NFTMetadata memory nftMetadata = NFTManager.NFTMetadata({
             name: "Master NFT",
             description: "This is the master NFT for exclusive access.",
-            image: "https://masternft.example.com",
+            metadataURL: "https://masternft.example.com",
             royaltyBps: 500,
             royaltyReceiver: deployerAddress,
             usageLimit: 10
@@ -91,3 +95,11 @@ contract DeployerCpChainBridge is Script {
         return address(uint160(uint256(adminSlot)));
     }
 }
+
+/**
+ * 
+ To deploy and verify:
+
+    forge script script/deployNFTManager.s.sol   --rpc-url $DOL_TESTNET_RPC_URL   --private-key $PRIVATE_KEY_WHIM 
+    --broadcast   --verify   --verifier blockscout   --verifier-url https://explorer-testnet.dolphinode.world/api/
+ */

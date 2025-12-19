@@ -76,8 +76,16 @@ contract DeployerCpChainBridge is Script {
 
         console.log("deploy proxyWhimLandVault:", address(proxyWhimLandVault));
         console.log(
+            "Implementation WhimLandVault:",
+            address(whimLandVaultImplementation)
+        );
+        console.log(
             "deploy proxyWhimLandOrderBook:",
             address(proxyWhimLandOrderBook)
+        );
+        console.log(
+            "Implementation WhimLandOrderBook:",
+            address(whimLandOrderBookImplementation)
         );
     }
 
@@ -91,3 +99,10 @@ contract DeployerCpChainBridge is Script {
         return address(uint160(uint256(adminSlot)));
     }
 }
+
+/**
+To deploy and verify:
+
+    forge script script/deployWhimLand.s.sol   --rpc-url $DOL_TESTNET_RPC_URL   --private-key $PRIVATE_KEY_WHIM   
+    --broadcast   --verify   --verifier blockscout   --verifier-url https://explorer-testnet.dolphinode.world/api/
+ */
