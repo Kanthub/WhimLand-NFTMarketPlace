@@ -101,12 +101,8 @@ contract WhimLandOrderBook is
             newProtocolShare,
             newVault,
             EIP712Name,
-<<<<<<< HEAD
             EIP712Version,
             owner
-=======
-            EIP712Version
->>>>>>> 7bfd3af (after audit)
         );
     }
 
@@ -121,10 +117,8 @@ contract WhimLandOrderBook is
             newProtocolShare,
             newVault,
             EIP712Name,
-
             EIP712Version,
             _owner
-
         );
     }
 

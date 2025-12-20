@@ -184,7 +184,8 @@ contract NFTManager is
     function mintPrintEdition(
         address to,
         uint256 masterId,
-        uint256 printNumber
+        uint256 printNumber,
+        string memory metadataURL
     )
         external
         onlyWhiteListed(masterId)
@@ -211,7 +212,11 @@ contract NFTManager is
         printEditionNumber[tokenId] = printNumber;
 
         // 继承 Master 的 metadata
-        metadata[tokenId] = metadata[masterId];
+        // metadata[tokenId] = metadata[masterId];
+        NFTMetadata memory metadataTem = metadata[masterId];
+        metadataTem.metadataURL = metadataURL;
+        metadata[tokenId] = metadataTem;
+
         isPrintExist[masterId][printNumber] = true;
 
         remainingUses[tokenId] = metadata[masterId].usageLimit;
