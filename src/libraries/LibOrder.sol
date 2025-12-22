@@ -68,7 +68,7 @@ library LibOrder {
 
     bytes32 public constant ORDER_TYPEHASH =
         keccak256(
-            "Order(uint8 side,uint8 saleKind,address maker,Asset nft,uint128 price,uint64 expiry,uint64 salt)Asset(uint256 tokenId,address collectionAddr,uint96 amount)"
+            "Order(uint8 side,uint8 saleKind,address maker,Asset nft,uint128 price,address currency,uint64 expiry,uint64 salt)Asset(uint256 tokenId,address collectionAddr,uint96 amount)"
         );
 
     function hash(Asset memory asset) internal pure returns (bytes32) {

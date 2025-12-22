@@ -316,7 +316,7 @@ contract WhimLandOrderBook is
             if (matchDetail.buyOrder.currency != address(0)) {
                 (bool success, bytes memory data) = address(this).delegatecall(
                     abi.encodeWithSignature(
-                        "matchOrderWithoutPayback((uint8,uint8,address,(uint256,address,uint96),uint128,uint64,uint64),(uint8,uint8,address,(uint256,address,uint96),uint128,uint64,uint64),uint256)",
+                        "matchOrderWithoutPayback((uint8,uint8,address,(uint256,address,uint96),uint128,address,uint64,uint64),(uint8,uint8,address,(uint256,address,uint96),uint128,address,uint64,uint64),uint256)",
                         matchDetail.sellOrder,
                         matchDetail.buyOrder,
                         matchDetail.buyOrder.price
@@ -330,7 +330,7 @@ contract WhimLandOrderBook is
             } else {
                 (bool success, bytes memory data) = address(this).delegatecall(
                     abi.encodeWithSignature(
-                        "matchOrderWithoutPayback((uint8,uint8,address,(uint256,address,uint96),uint128,uint64,uint64),(uint8,uint8,address,(uint256,address,uint96),uint128,uint64,uint64),uint256)",
+                        "matchOrderWithoutPayback((uint8,uint8,address,(uint256,address,uint96),uint128,address,uint64,uint64),(uint8,uint8,address,(uint256,address,uint96),uint128,address,uint64,uint64),uint256)",
                         matchDetail.sellOrder,
                         matchDetail.buyOrder,
                         msg.value - buyETHAmount
