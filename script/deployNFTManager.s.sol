@@ -73,7 +73,8 @@ contract DeployerCpChainBridge is Script {
         nftManager.mintPrintEdition(
             address(0x2aa76c12368Bc8aEF4190400Ef4Af19fd0b4247c),
             token_id,
-            77
+            77,
+            ""
         );
         console.log("Minted #77 Print Editions for Master NFT ID:", token_id);
 
