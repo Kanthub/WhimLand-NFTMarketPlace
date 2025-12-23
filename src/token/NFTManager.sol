@@ -315,7 +315,7 @@ contract NFTManager is
     function rawFulfillRandomWords(
         uint256 requestId,
         uint256[] calldata randomWords
-    ) external {
+    ) external returns (uint256[] memory) {
         // 安全：只能来自 VRF Pod
         require(msg.sender == address(vrfPod), "Unauthorized");
 
@@ -371,6 +371,7 @@ contract NFTManager is
 
         req.fulfilled = true;
         emit MintCompleted(requestId, chosen);
+        return chosen;
     }
 
     // ===================== Metadata =====================
