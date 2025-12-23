@@ -493,6 +493,10 @@ contract NFTManager is
         isEditer[operator][masterId] = approved;
     }
 
+    function setVrfPod(address _vrfPod) external onlyOwner {
+        vrfPod = IVrfPod(_vrfPod);
+    }
+
     // ===================== view functions =====================
     function getMetadata(
         uint256 tokenId
