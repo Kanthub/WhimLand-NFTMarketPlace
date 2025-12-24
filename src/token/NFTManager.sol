@@ -70,6 +70,10 @@ contract NFTManager is
     mapping(uint256 => RequestInfo) public requests;
     IVrfPod public vrfPod;
 
+    uint256 public pendingHead;
+    uint256 public pendingTail;
+    mapping(uint256 => uint256) internal queue;
+
     // ============== Events =====================
     event Received(address indexed sender, uint256 amount);
     event MintedNFT(
@@ -100,6 +104,15 @@ contract NFTManager is
     modifier onlyEditer(uint256 tokenId) {
         _onlyEditer(tokenId);
         _;
+    }
+
+    function _enqueue(uint256 id) internal {
+        queue[pendingTail++] = id;
+    }
+
+    function _dequeue() internal returns (uint256) {
+        require(pendingHead < pendingTail, "No pending requests");
+        return queue[pendingHead++];
     }
 
     function _onlyEditer(uint256 tokenId) internal view {
@@ -276,27 +289,131 @@ contract NFTManager is
         }
     }
 
-    // 发起盲盒请求
+    // // 发起盲盒请求
+    // function mintBatchPrintEditionRandomMasters(
+    //     address to,
+    //     uint256[] calldata masterIds,
+    //     uint256 totalAmount
+    // ) external whenNotPaused nonReentrant {
+    //     for (uint256 i = 0; i < masterIds.length; i++) {
+    //         require(
+    //             isWhiteListed[msg.sender][masterIds[i]] ||
+    //                 msg.sender == owner(),
+    //             "Not whitelisted"
+    //         );
+    //     } // 检查 msg.sender 是否在所有masterId白名单内
+    //     require(masterIds.length > 0, "No master IDs provided");
+    //     require(
+    //         nextTokenId + totalAmount + reservedSupply - 1 <= maxSupply,
+    //         "Exceeds max supply"
+    //     );
+    //     reservedSupply += totalAmount; // Reserve immediately
+
+    //     uint256 requestId = ++nextRequestId;
+    //     requests[requestId] = RequestInfo({
+    //         receiver: to,
+    //         totalAmount: totalAmount,
+    //         masterIds: masterIds,
+    //         fulfilled: false
+    //     });
+
+    //     // 请求随机数
+    //     vrfPod.requestRandomWords(requestId, totalAmount);
+
+    //     emit MintRequested(requestId, to, totalAmount, masterIds);
+    // }
+
+    // // Oracle fulfill 回调
+    // // 由 VRF Manager 调用 Pod，然后 Pod 再回调此函数
+    // function rawFulfillRandomWords(
+    //     uint256 requestId,
+    //     uint256[] calldata randomWords
+    // ) external returns (uint256[] memory) {
+    //     // 安全：只能来自 VRF Pod
+    //     require(msg.sender == address(vrfPod), "Unauthorized");
+
+    //     RequestInfo storage req = requests[requestId];
+    //     require(!req.fulfilled, "Already fulfilled");
+    //     require(req.receiver != address(0), "Invalid request");
+
+    //     uint256[] memory masterIds = req.masterIds;
+    //     uint256 totalAmount = req.totalAmount;
+    //     address to = req.receiver;
+
+    //     uint256[] memory chosen = new uint256[](totalAmount);
+
+    //     reservedSupply -= totalAmount; // Release reservation
+
+    //     for (uint256 i = 0; i < totalAmount; i++) {
+    //         // 使用随机数选择 Master ID
+    //         uint256 randomIndex = randomWords[i] % masterIds.length;
+
+    //         uint256 masterId = masterIds[randomIndex];
+    //         require(isMaster[masterId], "Invalid masterId");
+    //         chosen[i] = masterId;
+
+    //         uint256 tokenId = nextTokenId++;
+
+    //         _safeMint(to, tokenId);
+
+    //         // 标记为非 Master
+    //         isMaster[tokenId] = false;
+    //         fromMaster[tokenId] = masterId;
+
+    //         // 随机生成 print edition 编号，确保不重复
+    //         uint256 startingPrintNumber = 1;
+    //         while (isPrintExist[masterId][startingPrintNumber]) {
+    //             startingPrintNumber++;
+    //         }
+
+    //         printEditionNumber[tokenId] = startingPrintNumber;
+    //         isPrintExist[masterId][startingPrintNumber] = true;
+
+    //         // 继承 Master 的 metadata
+    //         metadata[tokenId] = metadata[masterId];
+    //         remainingUses[tokenId] = metadata[masterId].usageLimit;
+
+    //         emit MintedNFT(
+    //             to,
+    //             tokenId,
+    //             masterId,
+    //             startingPrintNumber,
+    //             remainingUses[tokenId]
+    //         );
+    //     }
+
+    //     req.fulfilled = true;
+    //     emit MintCompleted(requestId, chosen);
+    //     return chosen;
+    // }
+
+    // -----------------------
+    //   发起 mint 盲盒请求
+    // -----------------------
     function mintBatchPrintEditionRandomMasters(
         address to,
         uint256[] calldata masterIds,
         uint256 totalAmount
-    ) external whenNotPaused nonReentrant {
+    ) external {
+        require(masterIds.length > 0, "No master IDs provided");
+
         for (uint256 i = 0; i < masterIds.length; i++) {
             require(
                 isWhiteListed[msg.sender][masterIds[i]] ||
                     msg.sender == owner(),
                 "Not whitelisted"
             );
-        } // 检查 msg.sender 是否在所有masterId白名单内
-        require(masterIds.length > 0, "No master IDs provided");
+        }
+
         require(
             nextTokenId + totalAmount + reservedSupply - 1 <= maxSupply,
             "Exceeds max supply"
         );
-        reservedSupply += totalAmount; // Reserve immediately
+
+        reservedSupply += totalAmount;
 
         uint256 requestId = ++nextRequestId;
+
         requests[requestId] = RequestInfo({
             receiver: to,
             totalAmount: totalAmount,
@@ -304,7 +421,9 @@ contract NFTManager is
             fulfilled: false
         });
 
-        // 请求随机数
+        _enqueue(requestId);
+
+        // 只请求随机数，不依赖 requestId
         vrfPod.requestRandomWords(requestId, totalAmount);
 
         emit MintRequested(requestId, to, totalAmount, masterIds);
@@ -313,13 +432,17 @@ contract NFTManager is
     // Oracle fulfill 回调
     // 由 VRF Manager 调用 Pod，然后 Pod 再回调此函数
     function rawFulfillRandomWords(
-        uint256 requestId,
+        // uint256 requestId,
         uint256[] calldata randomWords
     ) external returns (uint256[] memory) {
         // 安全：只能来自 VRF Pod
         require(msg.sender == address(vrfPod), "Unauthorized");
 
+        require(randomWords.length > 0, "No random words");
+
+        uint256 requestId = _dequeue();
         RequestInfo storage req = requests[requestId];
+
         require(!req.fulfilled, "Already fulfilled");
         require(req.receiver != address(0), "Invalid request");
 
@@ -332,10 +455,27 @@ contract NFTManager is
         reservedSupply -= totalAmount; // Release reservation
 
         for (uint256 i = 0; i < totalAmount; i++) {
-            // 使用随机数选择 Master ID
-            uint256 randomIndex = randomWords[i] % masterIds.length;
+            uint256 baseRandom;
 
+            if (i < randomWords.length) {
+                baseRandom = randomWords[i];
+            } else {
+                // 用 VRF 基础随机 + i + requestId 进行扩展
+                baseRandom = uint256(
+                    keccak256(
+                        abi.encode(
+                            randomWords[i % randomWords.length],
+                            requestId,
+                            i
+                        )
+                    )
+                );
+            }
+
+            // 使用随机数选择 Master ID
+            uint256 randomIndex = baseRandom % masterIds.length;
             uint256 masterId = masterIds[randomIndex];
+
             require(isMaster[masterId], "Invalid masterId");
             chosen[i] = masterId;
 
