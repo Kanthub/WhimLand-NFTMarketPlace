@@ -12,7 +12,7 @@ import {NFTManager} from "../src/token/NFTManager.sol";
 contract UpgradeNFTManager is Script {
     ProxyAdmin public nftManagerProxyAdmin;
     address public constant NFT_MANAGER_PROXY_ADDRESS =
-        0xCDcA402f519a116653eA2744B34fa92876ACC1Fc;
+        0x8fdC85a4887FF7332f43456DeE819667eD35eba6;
 
     function run() external {
         uint256 privateKey = vm.envUint("PRIVATE_KEY_WHIM");
