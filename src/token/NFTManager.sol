@@ -248,10 +248,12 @@ contract NFTManager is
         address to,
         uint256 amount,
         uint256 masterId,
-        uint256 startingPrintNumber
+        uint256 startingPrintNumber,
+        string[] memory metadataURLs
     ) external onlyWhiteListed(masterId) whenNotPaused nonReentrant {
         require(nextTokenId + amount - 1 <= maxSupply, "Exceeds max supply");
         require(isMaster[masterId], "Invalid masterId");
+        require(metadataURLs.length == amount, "Metadata URLs length mismatch");
         for (uint256 i = 0; i < amount; i++) {
             uint256 tokenId = nextTokenId++;
 
@@ -276,8 +278,10 @@ contract NFTManager is
             isPrintExist[masterId][startingPrintNumber] = true;
 
             // 继承 Master 的 metadata
-            metadata[tokenId] = metadata[masterId];
-            remainingUses[tokenId] = metadata[masterId].usageLimit;
+            NFTMetadata memory metadataTem = metadata[masterId];
+            remainingUses[tokenId] = metadataTem.usageLimit;
+            metadataTem.metadataURL = metadataURLs[i];
+            metadata[tokenId] = metadataTem;
 
             emit MintedNFT(
                 to,
